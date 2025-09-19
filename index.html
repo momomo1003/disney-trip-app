@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Our Disney Trip</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <style>
+        :root {
+            --brand-yellow: #fde047; --brand-blue: #0e7490; --brand-dark: #1e293b; --brand-bg: var(--brand-blue);
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--brand-bg); color: var(--brand-dark); }
+        .font-display { font-family: 'Dela Gothic One', sans-serif; text-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
+        .card { background-color: white; border: 2px solid var(--brand-dark); border-radius: 1rem; box-shadow: 6px 6px 0 var(--brand-dark); animation: slideUp 0.5s ease-out forwards; }
+        #splash-screen { animation: fadeOut 0.5s ease-in 2.5s forwards; }
+        #splash-title { animation: fadeIn 1s ease-out 0.5s forwards, slideUp 1s ease-out 0.5s forwards; }
+        .nav-item.active { background-color: var(--brand-yellow); color: var(--brand-dark); }
+
+        .modal-overlay { transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal-overlay .card { transition: transform 0.3s ease; transform: scale(0.95); max-height: 85vh; overflow-y: auto; }
+        .modal-overlay.visible .card { transform: scale(1); }
+        
+        #schedule-sub-nav { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; opacity: 0; transform: translateY(100%); pointer-events: none; }
+        #schedule-sub-nav.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .sub-nav-item.active { background-color: var(--brand-dark); color: var(--brand-yellow); }
+        #schedule-sub-nav, #bottom-nav { overflow: hidden; }
+
+        /* 編集モード用スタイル */
+        .edit-controls { display: none; }
+        body.edit-mode .edit-controls { display: flex; }
+        .form-input { width: 100%; padding: 8px; border: 2px solid var(--brand-dark); border-radius: 8px; margin-bottom: 8px; font-size: 1rem; }
+        .form-label { font-weight: 700; margin-bottom: 4px; display: block; }
+        .form-button { width: 100%; background-color: var(--brand-yellow); color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); }
+        .delete-btn { width: 100%; background-color: #fca5a5; color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); margin-top: 8px; }
+        .custom-checkbox { appearance: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--brand-dark); border-radius: 4px; position: relative; cursor: pointer; transition: background-color 0.2s; }
+        .custom-checkbox:checked { background-color: var(--brand-yellow); }
+        .custom-checkbox:checked::after { content: '✔'; font-size: 1rem; color: var(--brand-dark); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="splash-screen" class="fixed inset-0 bg-[var(--brand-yellow)] z-[60] flex flex-col justify-center items-center text-center p-4">
+        <div id="splash-title" class="opacity-0">
+            <h1 class="font-display text-4xl text-white" style="text-shadow: 3px 3px 0 var(--brand-dark);">Our Magical</h1>
+            <h1 class="font-display text-6xl text-[var(--brand-dark)]" style="text-shadow: 3px 3px 0 #fff;">TRIP</h1>
+        </div>
+    </div>
+
+    <div id="edit-mode-toggle" class="fixed top-4 right-4 z-50 w-14 h-14 bg-white border-2 border-black rounded-full shadow-lg flex items-center justify-center cursor-pointer">
+        <i data-lucide="pencil" class="w-7 h-7"></i>
+    </div>
+    
+    <main class="container mx-auto px-4 pt-8 pb-48">
+        <div id="trip-id-container" class="mb-4 text-center text-white hidden">
+            <label class="font-bold text-sm">Trip ID:</label>
+            <input id="trip-id-display" type="text" readonly class="bg-transparent text-center text-white w-32 font-mono">
+            <button id="copy-trip-id" class="p-1"><i data-lucide="copy" class="w-4 h-4"></i></button>
+        </div>
+        <section id="schedule-content" class="content-section"></section>
+        <section id="park-content" class="content-section hidden"></section>
+        <section id="info-content" class="content-section hidden"></section>
+        <section id="packing-content" class="content-section hidden"></section>
+        <section id="memo-content" class="content-section hidden"></section>
+    </main>
+
+    <div id="schedule-sub-nav" class="fixed bottom-[96px] left-4 right-4 z-30 h-14 bg-white border-2 border-black rounded-2xl shadow-[0_8px_0_var(--brand-dark)]"></div>
+    <footer id="bottom-nav" class="fixed bottom-4 left-4 right-4 z-40 h-20 bg-white border-2 border-black rounded-2xl shadow-[0_8px_0_var(--brand-dark)]">
+        <div class="grid grid-cols-5 h-full">
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer active" data-tab="schedule"><i data-lucide="calendar-days" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">SCHEDULE</span></div>
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="park"><i data-lucide="castle" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">PARK</span></div>
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="info"><i data-lucide="info" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">INFO</span></div>
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="packing"><i data-lucide="luggage" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">PACKING</span></div>
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="memo"><i data-lucide="message-circle" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">MEMO</span></div>
+        </div>
+    </footer>
+
+    <div id="view-modal" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"></div>
+    <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9t5zcBSDaEGjoYqoeOVYJvXTKJVF8U8s",
+            authDomain: "my-magical-trip.firebaseapp.com",
+            projectId: "my-magical-trip",
+            storageBucket: "my-magical-trip.firebasestorage.app",
+            messagingSenderId: "487174348558",
+            appId: "1:487174348558:web:757571396bb4f8d7fc415f"
+        };
+        // この変数を文字列としてグローバルスコープに設定
+        window.__firebase_config = JSON.stringify(firebaseConfig);
+        window.__app_id = firebaseConfig.appId;
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        let db, auth, tripData = {}, isEditing = false, tripId, currentDayIndex = 0;
+        let tempTripData = {}; 
+        
+        const defaultTripData = {
+            otherInfo: [
+                { title: "Flight Info", subtitle: "JAL / HND ⇄ MCO", details: "Confirmation #: ABC123\nSeat: 15A, 15B\nNote: Check-in online 24 hours prior to departure." },
+                { title: "Rental Car", subtitle: "Hertz @ MCO Airport", details: "Reservation under 'Tanaka'.\nPickup: Sep 1, 2025, 10:00 AM\nReturn: Sep 5, 2025, 5:00 PM" }
+            ],
+            schedule: [
+                { date: "11月1日(土)", short: "1日目", theme: "DisneySea", events: [ { time: "15:00", title: "シェラトンに到着", location: "ホテル", details: "チェックイン後、荷物を置いてリゾートラインへ。", image: "" } ] },
+                { date: "11月2日(日)", short: "2日目", theme: "Disneyland", events: [ { time: "06:30", title: "朝食", location: "グランカフェ (シェラトン1F)", details: "ビュッフェ形式の朝食。", image: "" } ] },
+                { date: "11月3日(月)", short: "3日目", theme: "DisneySea", events: [ { time: "10:00", title: "ホテルで朝食", location: "オチェーアノ", details: "ビュッフェをゆっくり楽しむ。", image: "" } ] },
+                { date: "11月4日(火)", short: "4日目", theme: "Homeward Bound", events: [ { time: "09:00", title: "ホテルで最後の朝食", location: "ベッラヴィスタ・ラウンジ", details: "パークを眺めながら優雅に朝ごはん。", image: "" } ] }
+            ],
+            parkInfo: { foods: [], souvenirs: [], photoSpots: [] },
+            packing: [{ item: "パークチケット", done: false }, { item: "着替え", done: false }],
+            memo: []
+        };
+        
+        async function initializeFirebase() {
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.log("Firebase config not found, running in local mode.");
+                tripData = defaultTripData;
+                renderAllContent();
+                return;
+            }
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+            } catch (error) { console.error("Firebase sign-in failed:", error); }
+            onAuthStateChanged(auth, user => { if (user) setupTripListener(); });
+        }
+        
+        function setupTripListener() {
+            const params = new URLSearchParams(window.location.search);
+            tripId = params.get('trip') || `trip-${Math.random().toString(36).substr(2, 9)}`;
+            if (!params.has('trip') && window.location.protocol !== 'blob:') {
+                try { window.history.replaceState({}, '', `?trip=${tripId}`); } catch (e) { console.error("History state could not be replaced.", e); }
+            }
+            document.getElementById('trip-id-display').value = tripId;
+            document.getElementById('trip-id-container').classList.remove('hidden');
+            const tripDocRef = doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId);
+            onSnapshot(tripDocRef, (docSnap) => {
+                tripData = docSnap.exists() ? docSnap.data() : defaultTripData;
+                if (!docSnap.exists() && db) setDoc(tripDocRef, tripData);
+                renderAllContent();
+            });
+        }
+
+        async function saveChanges() {
+            if (!tripId || !db) return;
+            const tripDocRef = doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId);
+            try {
+                await setDoc(tripDocRef, tempTripData);
+                alert('保存しました！');
+            } catch (e) { console.error("Error updating document: ", e); alert('保存に失敗しました。'); }
+        }
+
+        function renderAllContent() {
+            const data = isEditing ? tempTripData : tripData;
+            if (!data) return;
+            renderSchedule(data); renderParkInfo(data); renderBasicInfo(data);
+            renderPackingList(data); renderMemo(data); renderScheduleSubNav(data);
+            lucide.createIcons();
+        }
+        
+        function createSectionHeader(title) { return `<h2 class="font-display text-3xl text-center mb-8 text-white">${title}</h2>`; }
+
+        function renderSchedule(data) {
+            const container = document.getElementById('schedule-content');
+            const day = data.schedule[currentDayIndex];
+            if (!day) return;
+            let content = createSectionHeader(`SCHEDULE - ${day.theme}`);
+            content += `<div class="card p-6 mb-8"><div class="flex justify-between items-center mb-4"><h3 class="font-display text-xl">${day.date}</h3></div><div class="space-y-4">`;
+            (day.events || []).forEach((event, eventIndex) => {
+                content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
+                            <p class="font-bold">${event.time} - ${event.title}</p>
+                        </div>`;
+            });
+            content += `</div><div class="edit-controls mt-4"><button data-action="add-schedule" data-day="${currentDayIndex}" class="form-button">予定を追加</button></div></div>`;
+            container.innerHTML = content;
+        }
+
+        function renderParkInfo(data) {
+             const container = document.getElementById('park-content');
+             let content = createSectionHeader("PARK INFO");
+             const renderGrid = (title, items, type) => {
+                 let grid = `<div class="mb-8"><h3 class="font-display text-xl mb-4">${title}</h3><div class="grid grid-cols-2 gap-4">`;
+                 (items || []).forEach((item, index) => {
+                     grid += `<div class="park-item relative border-2 border-black rounded-lg overflow-hidden bg-white cursor-pointer" data-type="${type}" data-index="${index}">
+                                 <img src="${item.image || 'https://placehold.co/400x300/cccccc/27272a?text=No+Image'}" alt="${item.name}" class="w-full h-24 object-cover border-b-2 border-black">
+                                 <div class="p-2"><h4 class="font-bold text-sm">${item.name}</h4><p class="text-xs text-gray-500">${(item.locations && item.locations[0]) ? item.locations[0].area : 'N/A'}</p></div>
+                             </div>`;
+                 });
+                 grid += `</div><div class="edit-controls mt-2"><button data-action="add-park" data-type="${type}" class="form-button text-sm py-2">「${title}」を追加</button></div></div>`;
+                 return grid;
+             };
+             content += '<div class="card p-6">';
+             content += renderGrid("Foods & Drinks", data.parkInfo.foods, 'foods');
+             content += renderGrid("Souvenirs", data.parkInfo.souvenirs, 'souvenirs');
+             content += renderGrid("Photo Spots", data.parkInfo.photoSpots, 'photoSpots');
+             content += '</div>';
+             container.innerHTML = content;
+        }
+        
+        function renderBasicInfo(data) {
+            const container = document.getElementById('info-content');
+            let content = createSectionHeader("OTHER INFO");
+            content += '<div class="card p-6"><div class="space-y-4">';
+            (data.otherInfo || []).forEach((item, index) => {
+                content += `<div class="info-item p-4 border-2 border-black rounded-lg cursor-pointer hover:bg-gray-50" data-index="${index}">
+                                <h4 class="font-bold text-lg">${item.title}</h4>
+                                <p class="text-sm text-gray-600">${item.subtitle}</p>
+                            </div>`;
+            });
+            content += '</div><div class="edit-controls mt-4"><button data-action="add-info" class="form-button">情報を追加</button></div></div>';
+            container.innerHTML = content;
+        }
+
+        function renderPackingList(data) {
+            const container = document.getElementById('packing-content');
+            let content = createSectionHeader("PACKING LIST");
+            content += '<div class="card p-6">';
+            let list = '<ul class="space-y-3">';
+            (data.packing || []).forEach((item, index) => {
+                const isChecked = isEditing ? (tempTripData.packing[index]?.done ?? false) : item.done;
+                list += `<li class="packing-item flex justify-between items-center" data-index="${index}">
+                            <div class="flex items-center grow">
+                                <input type="checkbox" id="pack-${index}" class="custom-checkbox" ${isChecked ? "checked" : ""}>
+                                <label for="pack-${index}" class="ml-3 font-medium ${!isEditing && isChecked ? 'line-through text-gray-400' : ''}">${item.item}</label>
+                            </div>
+                        </li>`;
+            });
+            list += '</ul>';
+
+            if (isEditing) {
+                list += `<div class="mt-4 flex items-center space-x-2">
+                                <button data-action="add-packing" class="form-button text-sm py-2 grow">追加</button>
+                                <button data-action="delete-selected-packing" class="delete-btn text-sm py-2 px-3 w-auto shrink-0" style="margin-top:0;">選択削除</button>
+                            </div>`;
+            }
+            
+            content += list;
+            content += '</div>';
+            container.innerHTML = content;
+        }
+
+        function renderMemo(data) {
+            const container = document.getElementById('memo-content');
+            let content = createSectionHeader("MEMO");
+            let list = `<div class="space-y-4 mb-6">`;
+            [...(data.memo || [])].reverse().forEach((memo, index) => {
+                const originalIndex = (data.memo || []).length - 1 - index;
+                list += `<div class="memo-item flex justify-between items-center border-2 border-black rounded-lg p-3 bg-white" data-index="${originalIndex}">
+                                    <div>
+                                        <p class="mb-1">${memo.content}</p>
+                                        <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
+                                    </div>
+                                </div>`;
+            });
+            list += (data.memo || []).length === 0 ? '<p class="text-center text-sm text-gray-400">メモはまだありません</p>' : '';
+            list += '</div>';
+            const form = `<div><input id="memo-name" type="text" placeholder="名前" class="form-input"><textarea id="memo-input" class="form-input" rows="3" placeholder="伝言やメモ..."></textarea><button id="add-memo-btn" class="form-button">メモを追加</button></div>`;
+            content += `<div class="card p-6">${list}${form}</div>`;
+            container.innerHTML = content;
+        }
+
+        function renderScheduleSubNav(data) {
+             const container = document.getElementById('schedule-sub-nav');
+             let content = '<div class="grid grid-cols-4 h-full">';
+             (data.schedule || []).forEach((day, index) => {
+                 const isActive = index === currentDayIndex ? 'active' : '';
+                 content += `<div class="sub-nav-item flex items-center justify-center cursor-pointer font-bold ${isActive}" data-day-index="${index}">${day.short}</div>`;
+             });
+             content += '</div>';
+             container.innerHTML = content;
+        }
+        
+        function openViewModal(content) {
+            const modal = document.getElementById('view-modal');
+            modal.innerHTML = content;
+            modal.classList.add('visible');
+        }
+
+        function openEditModal(content, onSave, onDelete) {
+            const modal = document.getElementById('edit-modal');
+            modal.innerHTML = `<div class="card w-full max-w-sm p-6 relative">${content}</div>`;
+            modal.classList.add('visible');
+            modal.querySelector('.card').onclick = e => e.stopPropagation();
+
+            const saveButton = modal.querySelector('.save-edit-btn');
+            if (saveButton) {
+                saveButton.onclick = () => {
+                    if (onSave()) {
+                        closeEditModal();
+                        renderAllContent();
+                    }
+                };
+            }
+
+            const deleteButton = modal.querySelector('.delete-btn');
+            if (deleteButton) {
+                deleteButton.onclick = () => {
+                    if (confirm('本当にこの項目を削除しますか？')) {
+                        onDelete();
+                        closeEditModal();
+                        renderAllContent();
+                    }
+                };
+            }
+
+            const imageInput = modal.querySelector('input[type="file"]');
+            if(imageInput) {
+                imageInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const base64 = await handleImageUpload(file);
+                        const preview = modal.querySelector('.image-preview');
+                        if (preview) {
+                            preview.src = base64;
+                            preview.dataset.base64 = base64;
+                            preview.classList.remove('hidden');
+                        }
+                    }
+                };
+            }
+        }
+        
+        function closeViewModal() { document.getElementById('view-modal').classList.remove('visible'); }
+        function closeEditModal() { document.getElementById('edit-modal').classList.remove('visible'); }
+
+        function handleImageUpload(file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+            const splashScreen = document.getElementById('splash-screen');
+            setTimeout(() => { splashScreen.style.pointerEvents = 'none'; }, 3000);
+
+            const navItems = document.querySelectorAll('#bottom-nav .nav-item');
+            const contentSections = document.querySelectorAll('.content-section');
+            const scheduleSubNav = document.getElementById('schedule-sub-nav');
+            
+            if (document.querySelector('.nav-item.active')?.dataset.tab === 'schedule') {
+                scheduleSubNav.classList.add('visible');
+            } else {
+                scheduleSubNav.classList.remove('visible');
+            }
+
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    navItems.forEach(i => i.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    const targetId = `${e.currentTarget.dataset.tab}-content`;
+                    contentSections.forEach(section => section.classList.toggle('hidden', section.id !== targetId));
+                    scheduleSubNav.classList.toggle('visible', e.currentTarget.dataset.tab === 'schedule');
+                });
+            });
+            
+            document.getElementById('edit-mode-toggle').addEventListener('click', () => {
+                isEditing = !isEditing;
+                document.body.classList.toggle('edit-mode');
+                const toggle = document.getElementById('edit-mode-toggle');
+                if (isEditing) {
+                    tempTripData = JSON.parse(JSON.stringify(tripData));
+                    toggle.innerHTML = `<i data-lucide="save" class="w-7 h-7"></i>`;
+                } else {
+                    saveChanges();
+                    toggle.innerHTML = `<i data-lucide="pencil" class="w-7 h-7"></i>`;
+                }
+                lucide.createIcons();
+                renderAllContent();
+            });
+            
+            document.querySelector('main').addEventListener('click', mainContentClickHandler);
+            document.getElementById('schedule-sub-nav').addEventListener('click', (e) => {
+                const subNavItem = e.target.closest('.sub-nav-item');
+                if (subNavItem) {
+                    currentDayIndex = parseInt(subNavItem.dataset.dayIndex, 10);
+                    renderAllContent();
+                }
+            });
+             [document.getElementById('view-modal'), document.getElementById('edit-modal')].forEach(modal => {
+                 modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+            });
+        });
+
+        function mainContentClickHandler(e) {
+            const actionButton = e.target.closest('[data-action]');
+
+            if (actionButton) {
+                handleActionButtonClick(actionButton.dataset);
+                return;
+            }
+
+            if (isEditing) {
+                const scheduleItem = e.target.closest('.schedule-item');
+                if (scheduleItem) { handleScheduleItemClick(scheduleItem.dataset.day, scheduleItem.dataset.event); return; }
+                const parkItem = e.target.closest('.park-item');
+                if (parkItem) { handleParkItemClick(parkItem.dataset.type, parkItem.dataset.index); return; }
+                const infoItem = e.target.closest('.info-item');
+                if (infoItem) { handleInfoItemClick(infoItem.dataset.index); return; }
+                const memoItem = e.target.closest('.memo-item');
+                if (memoItem && confirm('このメモを削除しますか？')) {
+                    tempTripData.memo.splice(memoItem.dataset.index, 1);
+                    renderAllContent();
+                }
+            } else { 
+                const scheduleItem = e.target.closest('.schedule-item');
+                if (scheduleItem) {
+                    const { day, event } = scheduleItem.dataset;
+                    const item = tripData.schedule[day].events[event];
+                    openViewModal(`<div class="card w-full max-w-sm p-6 relative"><h3 class="font-display text-2xl text-center mb-4">${item.title}</h3>${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-lg mb-4">` : ''}<div class="bg-gray-100 p-3 rounded-lg text-center mb-4"><p class="font-bold text-sm">${item.time}</p><p class="text-sm">${item.location}</p></div><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
+                    return;
+                }
+                const parkItem = e.target.closest('.park-item');
+                if (parkItem) {
+                    const { type, index } = parkItem.dataset;
+                    const item = tripData.parkInfo[type][index];
+                    let locationHtml = (item.locations || []).map(loc => `<div class="mb-2"><p class="font-bold">${loc.store || ''}</p><p class="text-xs">${loc.area || ''} / ${loc.hours || ''}</p></div>`).join('');
+                    openViewModal(`<div class="card w-full max-w-sm"><img src="${item.image || 'https://placehold.co/400x300/cccccc/27272a?text=No+Image'}" class="w-full h-48 object-cover rounded-t-xl border-b-2 border-black" alt=""><div class="p-6"><h3 class="font-display text-2xl text-center mb-2">${item.name}</h3><div class="text-sm text-left mb-4">${locationHtml}</div><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.memo || ''}</p></div></div>`);
+                    return;
+                }
+                const infoItem = e.target.closest('.info-item');
+                if (infoItem) {
+                    const { index } = infoItem.dataset;
+                    const item = tripData.otherInfo[index];
+                    openViewModal(`<div class="card w-full max-w-sm p-6 relative"><h3 class="font-display text-2xl text-center mb-4">${item.title}</h3><p class="text-center text-gray-500 mb-4">${item.subtitle}</p><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
+                    return;
+                }
+                  const packingCheckbox = e.target.closest('.packing-item input[type="checkbox"]');
+                if(packingCheckbox){
+                    const itemElement = packingCheckbox.closest('.packing-item');
+                    const { index } = itemElement.dataset;
+                    const item = tripData.packing[index];
+                    item.done = packingCheckbox.checked;
+                    if (db) {
+                        setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { packing: tripData.packing }, { merge: true });
+                    }
+                    renderAllContent(); // Re-render to show line-through
+                }
+            }
+            
+            if (e.target.id === 'add-memo-btn') {
+                const nameInput = document.getElementById('memo-name');
+                const contentInput = document.getElementById('memo-input');
+                if (contentInput.value.trim() === '') return;
+                const newMemo = { name: nameInput.value.trim() || '名無しさん', content: contentInput.value.trim(), timestamp: new Date().toISOString() };
+                const targetData = db ? tripData : tempTripData;
+                if(!targetData.memo) targetData.memo = [];
+                targetData.memo.push(newMemo);
+                if(db) setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { memo: targetData.memo }, { merge: true });
+                else renderMemo(targetData);
+                contentInput.value = '';
+            }
+        }
+        
+        function handleScheduleItemClick(day, event) {
+            const item = tempTripData.schedule[day].events[event];
+            const form = `<h3 class="font-display text-xl text-center mb-4">予定を編集</h3>
+                <label class="form-label">時間</label><input id="edit-time" type="time" class="form-input" value="${item.time}">
+                <label class="form-label">タイトル</label><input id="edit-title" type="text" class="form-input" value="${item.title}">
+                <label class="form-label">場所</label><input id="edit-location" type="text" class="form-input" value="${item.location || ''}">
+                <label class="form-label">詳細</label><textarea id="edit-details" class="form-input" rows="3">${item.details || ''}</textarea>
+                <label class="form-label">画像</label><input id="edit-image" type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-base64="${item.image || ''}">
+                <button class="form-button save-edit-btn mt-4">変更を保存</button>
+                <button class="delete-btn">この予定を削除</button>`;
+            openEditModal(form, () => {
+                const editedItem = tempTripData.schedule[day].events[event];
+                editedItem.time = document.getElementById('edit-time').value;
+                editedItem.title = document.getElementById('edit-title').value;
+                editedItem.location = document.getElementById('edit-location').value;
+                editedItem.details = document.getElementById('edit-details').value;
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64;
+                return true;
+            }, () => {
+                tempTripData.schedule[day].events.splice(event, 1);
+            });
+        }
+
+        function handleParkItemClick(type, index) {
+            const item = tempTripData.parkInfo[type][index];
+            let locationFields = (item.locations || [{store:'', hours:'', area:''}]).map((loc) => `
+                <div class="border p-2 rounded-md mb-2">
+                    <input type="text" class="form-input text-sm" data-field="store" value="${loc.store || ''}" placeholder="店舗">
+                    <input type="text" class="form-input text-sm" data-field="hours" value="${loc.hours || ''}" placeholder="営業時間">
+                    <input type="text" class="form-input text-sm" data-field="area" value="${loc.area || ''}" placeholder="エリア">
+                </div>`).join('');
+            const form = `<h3 class="font-display text-xl text-center mb-4">項目を編集</h3>
+                <label class="form-label">名前</label><input id="edit-name" type="text" class="form-input" value="${item.name}">
+                <label class="form-label">店舗・エリア情報</label><div id="locations-container">${locationFields}</div>
+                <button id="add-location-field" type="button" class="text-sm bg-gray-200 py-1 px-3 rounded-md mb-2">場所を追加</button>
+                <label class="form-label">メモ</label><textarea id="edit-memo" class="form-input" rows="2">${item.memo || ''}</textarea>
+                <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-base64="${item.image || ''}">
+                <button class="form-button save-edit-btn mt-4">変更を保存</button>
+                <button class="delete-btn">この項目を削除</button>`;
+            openEditModal(form, () => {
+                const editedItem = tempTripData.parkInfo[type][index];
+                editedItem.name = document.getElementById('edit-name').value;
+                editedItem.memo = document.getElementById('edit-memo').value;
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64;
+                editedItem.locations = [];
+                document.querySelectorAll('#locations-container > div').forEach(div => {
+                    editedItem.locations.push({
+                        store: div.querySelector('[data-field="store"]').value,
+                        hours: div.querySelector('[data-field="hours"]').value,
+                        area: div.querySelector('[data-field="area"]').value,
+                    });
+                });
+                return true;
+            }, () => {
+                 tempTripData.parkInfo[type].splice(index, 1);
+            });
+            document.getElementById('add-location-field').onclick = () => {
+                const container = document.getElementById('locations-container');
+                container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
+            };
+        }
+        
+        function handleInfoItemClick(index) {
+            const item = tempTripData.otherInfo[index];
+            const form = `<h3 class="font-display text-xl text-center mb-4">情報を編集</h3>
+                <label class="form-label">Title</label><input id="edit-info-title" type="text" class="form-input" value="${item.title}">
+                <label class="form-label">Subtitle</label><input id="edit-info-subtitle" type="text" class="form-input" value="${item.subtitle}">
+                <label class="form-label">Details</label><textarea id="edit-info-details" class="form-input" rows="4">${item.details}</textarea>
+                <button class="form-button save-edit-btn mt-4">変更を保存</button>
+                <button class="delete-btn">この情報を削除</button>`;
+            
+            openEditModal(form, () => {
+                const editedItem = tempTripData.otherInfo[index];
+                editedItem.title = document.getElementById('edit-info-title').value;
+                editedItem.subtitle = document.getElementById('edit-info-subtitle').value;
+                editedItem.details = document.getElementById('edit-info-details').value;
+                return true;
+            }, () => {
+                tempTripData.otherInfo.splice(index, 1);
+            });
+        }
+
+        function handleActionButtonClick(dataset) {
+            const { action, day, type } = dataset;
+            if (action === 'add-schedule') {
+                const form = `<h3 class="font-display text-xl text-center mb-4">予定を追加</h3>
+                    <label class="form-label">時間</label><input id="add-time" type="time" class="form-input">
+                    <label class="form-label">タイトル</label><input id="add-title" type="text" class="form-input" placeholder="例: アトラクション名">
+                    <label class="form-label">場所</label><input id="add-location" type="text" class="form-input" placeholder="例: ファンタジーランド">
+                    <label class="form-label">詳細</label><textarea id="add-details" class="form-input" rows="3" placeholder="メモ..."></textarea>
+                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-base64="">
+                    <button class="form-button save-edit-btn mt-4">追加</button>`;
+                openEditModal(form, () => {
+                    if (!tempTripData.schedule[day].events) tempTripData.schedule[day].events = [];
+                    tempTripData.schedule[day].events.push({
+                        time: document.getElementById('add-time').value || '未定',
+                        title: document.getElementById('add-title').value,
+                        location: document.getElementById('add-location').value,
+                        details: document.getElementById('add-details').value,
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64 || ""
+                    });
+                    return true;
+                });
+            } else if (action === 'add-park') {
+                const form = `<h3 class="font-display text-xl text-center mb-4">項目を追加</h3>
+                    <label class="form-label">名前</label><input id="add-name" type="text" class="form-input" placeholder="例: リトルグリーンまん">
+                    <div id="locations-container"><div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div></div>
+                     <button id="add-location-field" type="button" class="text-sm bg-gray-200 py-1 px-3 rounded-md mb-2">場所を追加</button>
+                    <label class="form-label">メモ</label><textarea id="add-memo" class="form-input" rows="2"></textarea>
+                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-base64="">
+                    <button class="form-button save-edit-btn mt-4">追加</button>`;
+                openEditModal(form, () => {
+                    const newItem = {
+                        name: document.getElementById('add-name').value,
+                        memo: document.getElementById('add-memo').value,
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64 || "",
+                        locations: []
+                    };
+                    document.querySelectorAll('#locations-container > div').forEach(div => {
+                        newItem.locations.push({
+                            store: div.querySelector('[data-field="store"]').value,
+                            hours: div.querySelector('[data-field="hours"]').value,
+                            area: div.querySelector('[data-field="area"]').value,
+                        });
+                    });
+                     if (!tempTripData.parkInfo[type]) tempTripData.parkInfo[type] = [];
+                    tempTripData.parkInfo[type].push(newItem);
+                    return true;
+                });
+                  document.getElementById('add-location-field').onclick = () => {
+                       const container = document.getElementById('locations-container');
+                       container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
+                   };
+            } else if (action === 'add-packing') {
+                const form = `<h3 class="font-display text-xl text-center mb-4">持ち物をまとめて追加</h3>
+                    <label class="form-label">持ち物リスト（改行で区切る）</label>
+                    <textarea id="add-items" class="form-input" rows="5" placeholder="例:\nモバイルバッテリー\nレジャーシート\nエコバッグ"></textarea>
+                    <button class="form-button save-edit-btn mt-4">追加</button>`;
+                openEditModal(form, () => {
+                    const items = document.getElementById('add-items').value.split('\n').filter(item => item.trim() !== '');
+                    if (items.length > 0) {
+                        if (!tempTripData.packing) tempTripData.packing = [];
+                        items.forEach(item => tempTripData.packing.push({ item: item.trim(), done: false }));
+                    }
+                    return true;
+                });
+            } else if (action === 'delete-selected-packing') {
+                const checkboxes = document.querySelectorAll(`#packing-content .packing-item input[type="checkbox"]:checked`);
+                if (checkboxes.length > 0 && confirm(`${checkboxes.length}個の項目を削除しますか？`)) {
+                    const indicesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.closest('.packing-item').dataset.index));
+                    indicesToDelete.sort((a, b) => b - a);
+                    indicesToDelete.forEach(index => tempTripData.packing.splice(index, 1));
+                    renderAllContent();
+                }
+            } else if (action === 'add-info') {
+                const form = `<h3 class="font-display text-xl text-center mb-4">情報を追加</h3>
+                    <label class="form-label">Title</label><input id="add-info-title" type="text" class="form-input" placeholder="例：フライト情報">
+                    <label class="form-label">Subtitle</label><input id="add-info-subtitle" type="text" class="form-input" placeholder="例：JAL / HND ⇄ MCO">
+                    <label class="form-label">Details</label><textarea id="add-info-details" class="form-input" rows="4" placeholder="予約番号や座席番号などの詳細..."></textarea>
+                    <button class="form-button save-edit-btn mt-4">追加</button>`;
+                
+                openEditModal(form, () => {
+                    const newItem = {
+                        title: document.getElementById('add-info-title').value,
+                        subtitle: document.getElementById('add-info-subtitle').value,
+                        details: document.getElementById('add-info-details').value,
+                    };
+                    if (!tempTripData.otherInfo) tempTripData.otherInfo = [];
+                    tempTripData.otherInfo.push(newItem);
+                    return true;
+                });
+            }
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(registration => {
+                console.log('ServiceWorker registration successful');
+            }).catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+            });
+        }
+    </script>
+</body>
+</html>
