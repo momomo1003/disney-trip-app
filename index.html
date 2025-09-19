@@ -53,7 +53,7 @@
 <body class="antialiased">
     <div id="splash-screen" class="fixed inset-0 bg-[var(--brand-yellow)] z-[60] flex flex-col justify-center items-center text-center p-4">
         <div id="splash-title" class="opacity-0">
-            <h1 class="font-display text-4xl text-white" style="text-shadow: 3px 3px 0 var(--brand-dark);">Our Magical</h1>
+            <h1 class="font-display text-4xl text-white" style="text-shadow: 3px 3px 0 var(--brand-dark);">Our Disney</h1>
             <h1 class="font-display text-6xl text-[var(--brand-dark)]" style="text-shadow: 3px 3px 0 #fff;">TRIP</h1>
         </div>
     </div>
@@ -148,28 +148,15 @@
         }
         
         function setupTripListener() {
-            const params = new URLSearchParams(window.location.search);
-            let currentUrlTripId = params.get('trip');
-        
-            // 1. URLにIDがあれば、それを最優先で使う (共有された場合など)
-            if (currentUrlTripId) {
-                tripId = currentUrlTripId;
-                localStorage.setItem('tripId', tripId); // 今後のためにスマホに保存
-            } else {
-                // 2. URLになければ、スマホに保存されたIDを探す
-                tripId = localStorage.getItem('tripId');
-                if (!tripId) {
-                    // 3. どこにもなければ、新しいIDを生成して保存する
-                    tripId = `trip-${Math.random().toString(36).substr(2, 9)}`;
-                    localStorage.setItem('tripId', tripId);
-                }
-            }
-        
-            // 画面のURLを現在のTrip IDに更新する
+            // ↓↓↓ このIDをあなたの固定したいIDに変更してください ↓↓↓
+            tripId = "our-magical-trip-2025";
+
+            // URLを固定IDに合わせる（必須ではありませんが、共有時の混乱を避けるため推奨）
             if (window.location.search !== `?trip=${tripId}` && window.location.protocol !== 'blob:') {
                 try { window.history.replaceState({}, '', `?trip=${tripId}`); } catch (e) { console.error("History state could not be replaced.", e); }
             }
-        
+
+            // --- ここから下は元のコードと同じ ---
             document.getElementById('trip-id-display').value = tripId;
             document.getElementById('trip-id-container').classList.remove('hidden');
             const tripDocRef = doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId);
@@ -708,5 +695,4 @@
         }
     </script>
 </body>
-
 </html>
