@@ -194,8 +194,8 @@
             content += `<div class="card p-6 mb-8"><div class="flex justify-between items-center mb-4"><h3 class="font-display text-xl">${day.date}</h3></div><div class="space-y-4">`;
             (day.events || []).forEach((event, eventIndex) => {
                 content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
-                            <p class="font-bold">${event.time} - ${event.title}</p>
-                        </div>`;
+                                <p class="font-bold">${event.time} - ${event.title}</p>
+                            </div>`;
             });
             content += `</div><div class="edit-controls mt-4"><button data-action="add-schedule" data-day="${currentDayIndex}" class="form-button">予定を追加</button></div></div>`;
             container.innerHTML = content;
@@ -208,9 +208,9 @@
                  let grid = `<div class="mb-8"><h3 class="font-display text-xl mb-4">${title}</h3><div class="grid grid-cols-2 gap-4">`;
                  (items || []).forEach((item, index) => {
                      grid += `<div class="park-item relative border-2 border-black rounded-lg overflow-hidden bg-white cursor-pointer" data-type="${type}" data-index="${index}">
-                                 <img src="${item.image || 'https://placehold.co/400x300/cccccc/27272a?text=No+Image'}" alt="${item.name}" class="w-full h-24 object-cover border-b-2 border-black">
-                                 <div class="p-2"><h4 class="font-bold text-sm">${item.name}</h4><p class="text-xs text-gray-500">${(item.locations && item.locations[0]) ? item.locations[0].area : 'N/A'}</p></div>
-                             </div>`;
+                                  <img src="${item.image || 'https://placehold.co/400x300/cccccc/27272a?text=No+Image'}" alt="${item.name}" class="w-full h-24 object-cover border-b-2 border-black">
+                                  <div class="p-2"><h4 class="font-bold text-sm">${item.name}</h4><p class="text-xs text-gray-500">${(item.locations && item.locations[0]) ? item.locations[0].area : 'N/A'}</p></div>
+                              </div>`;
                  });
                  grid += `</div><div class="edit-controls mt-2"><button data-action="add-park" data-type="${type}" class="form-button text-sm py-2">「${title}」を追加</button></div></div>`;
                  return grid;
@@ -255,9 +255,9 @@
 
             if (isEditing) {
                 list += `<div class="mt-4 flex items-center space-x-2">
-                                <button data-action="add-packing" class="form-button text-sm py-2 grow">追加</button>
-                                <button data-action="delete-selected-packing" class="delete-btn text-sm py-2 px-3 w-auto shrink-0" style="margin-top:0;">選択削除</button>
-                            </div>`;
+                                    <button data-action="add-packing" class="form-button text-sm py-2 grow">追加</button>
+                                    <button data-action="delete-selected-packing" class="delete-btn text-sm py-2 px-3 w-auto shrink-0" style="margin-top:0;">選択削除</button>
+                                </div>`;
             }
             
             content += list;
@@ -272,10 +272,10 @@
             [...(data.memo || [])].reverse().forEach((memo, index) => {
                 const originalIndex = (data.memo || []).length - 1 - index;
                 list += `<div class="memo-item flex justify-between items-center border-2 border-black rounded-lg p-3 bg-white" data-index="${originalIndex}">
-                                    <div>
-                                        <p class="mb-1">${memo.content}</p>
-                                        <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
-                                    </div>
+                                        <div>
+                                            <p class="mb-1">${memo.content}</p>
+                                            <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
+                                        </div>
                                 </div>`;
             });
             list += (data.memo || []).length === 0 ? '<p class="text-center text-sm text-gray-400">メモはまだありません</p>' : '';
@@ -286,14 +286,14 @@
         }
 
         function renderScheduleSubNav(data) {
-             const container = document.getElementById('schedule-sub-nav');
-             let content = '<div class="grid grid-cols-4 h-full">';
-             (data.schedule || []).forEach((day, index) => {
-                 const isActive = index === currentDayIndex ? 'active' : '';
-                 content += `<div class="sub-nav-item flex items-center justify-center cursor-pointer font-bold ${isActive}" data-day-index="${index}">${day.short}</div>`;
-             });
-             content += '</div>';
-             container.innerHTML = content;
+              const container = document.getElementById('schedule-sub-nav');
+              let content = '<div class="grid grid-cols-4 h-full">';
+              (data.schedule || []).forEach((day, index) => {
+                  const isActive = index === currentDayIndex ? 'active' : '';
+                  content += `<div class="sub-nav-item flex items-center justify-center cursor-pointer font-bold ${isActive}" data-day-index="${index}">${day.short}</div>`;
+              });
+              content += '</div>';
+              container.innerHTML = content;
         }
         
         function openViewModal(content) {
@@ -435,7 +435,7 @@
                 }
             });
              [document.getElementById('view-modal'), document.getElementById('edit-modal')].forEach(modal => {
-                 modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+                  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
             });
         });
 
@@ -526,6 +526,9 @@
                 editedItem.location = document.getElementById('edit-location').value;
                 editedItem.details = document.getElementById('edit-details').value;
                 editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64;
+                // ▼▼▼ 修正点 ▼▼▼
+                tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
+                // ▲▲▲ 修正点 ▲▲▲
                 return true;
             }, () => {
                 tempTripData.schedule[day].events.splice(event, 1);
@@ -563,7 +566,7 @@
                 });
                 return true;
             }, () => {
-                 tempTripData.parkInfo[type].splice(index, 1);
+                tempTripData.parkInfo[type].splice(index, 1);
             });
             document.getElementById('add-location-field').onclick = () => {
                 const container = document.getElementById('locations-container');
@@ -610,6 +613,9 @@
                         details: document.getElementById('add-details').value,
                         image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64 || ""
                     });
+                    // ▼▼▼ 修正点 ▼▼▼
+                    tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
+                    // ▲▲▲ 修正点 ▲▲▲
                     return true;
                 });
             } else if (action === 'add-park') {
