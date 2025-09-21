@@ -55,13 +55,6 @@
         .nav-item { position: relative; }
         .notification-badge { position: absolute; top: 8px; right: 18px; background-color: #ef4444; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid white; transform: scale(0); transition: transform 0.2s ease; }
         .notification-badge.visible { transform: scale(1); }
-        .reactions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #d1d5db; }
-        .reaction-emoji { cursor: pointer; padding: 4px 8px; border-radius: 99px; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s; font-size: 1.1rem; line-height: 1; }
-        .reaction-emoji.reacted { background-color: var(--brand-yellow); border-color: var(--brand-dark); }
-        .reaction-emoji span { margin-left: 4px; font-size: 12px; font-weight: 500; }
-        .replies-container { margin-top: 12px; padding-left: 16px; border-left: 3px solid #f3f4f6; }
-        .reply-item { background-color: #f9fafb; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
-        .reply-form { margin-top: 8px; }
     </style>
 </head>
 <body class="antialiased">
@@ -273,36 +266,12 @@
 
         function renderMemo(data) {
             const container = document.getElementById('memo-content');
-            const availableReactions = ['😄', '🙏🏻', '👌🏻', '😭', '👍', '🙇‍♂️', '💪🏻', '🤔', '😡'];
             let content = createSectionHeader("MEMO");
             let list = `<div class="space-y-4 mb-6">`;
             [...(data.memo || [])].reverse().forEach((memo) => {
-                let reactionsHtml = '<div class="reactions-container">';
-                availableReactions.forEach(emoji => {
-                    const myName = localStorage.getItem('memoName') || '';
-                    const reacted = memo.reactions && memo.reactions[emoji] && memo.reactions[emoji].includes(myName);
-                    const count = (memo.reactions && memo.reactions[emoji]) ? memo.reactions[emoji].length : 0;
-                    reactionsHtml += `<div class="reaction-emoji ${reacted ? 'reacted' : ''}" data-action="react-memo" data-memo-id="${memo.id}" data-emoji="${emoji}">${emoji}${count > 0 ? `<span>${count}</span>` : ''}</div>`;
-                });
-                reactionsHtml += '</div>';
-
-                let repliesHtml = '<div class="replies-container">';
-                (memo.replies || []).forEach(reply => {
-                    repliesHtml += `<div class="reply-item">
-                                        <p class="text-sm">${reply.content}</p>
-                                        <div class="text-xs text-gray-500 mt-1"><span>${reply.name}</span> @ <span>${new Date(reply.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
-                                    </div>`;
-                });
-                repliesHtml += `</div>`;
-
                 list += `<div class="memo-item border-2 border-black rounded-lg p-4 bg-white" data-memo-id="${memo.id}">
-                            <p class="mb-1">${memo.content}</p>
+                            <p class="mb-1 whitespace-pre-wrap">${memo.content}</p>
                             <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
-                            ${reactionsHtml}
-                            ${repliesHtml}
-                            <div class="reply-form mt-2">
-                                <button class="text-sm font-bold text-[var(--brand-blue)]" data-action="reply-memo" data-memo-id="${memo.id}">リプライする</button>
-                            </div>
                          </div>`;
             });
             list += (data.memo || []).length === 0 ? '<p class="text-center text-sm text-gray-400">メモはまだありません</p>' : '';
@@ -446,28 +415,7 @@
         function mainContentClickHandler(e) {
             const actionButton = e.target.closest('[data-action]');
             if (actionButton) {
-                const { action, day, type, memoId, emoji } = actionButton.dataset;
-                if (action === 'react-memo') {
-                    const myName = localStorage.getItem('memoName') || '名無しさん';
-                    const targetMemo = tripData.memo.find(m => m.id === memoId);
-                    if (!targetMemo.reactions) targetMemo.reactions = {};
-                    if (!targetMemo.reactions[emoji]) targetMemo.reactions[emoji] = [];
-                    const myReactionIndex = targetMemo.reactions[emoji].indexOf(myName);
-                    if (myReactionIndex > -1) { targetMemo.reactions[emoji].splice(myReactionIndex, 1); } else { targetMemo.reactions[emoji].push(myName); }
-                    setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { memo: tripData.memo }, { merge: true });
-                } else if (action === 'reply-memo') {
-                    const myName = localStorage.getItem('memoName') || prompt("リプライする名前を入力してください:", "");
-                    if (!myName) return;
-                    localStorage.setItem('memoName', myName);
-                    const replyContent = prompt("リプライを入力してください:");
-                    if (!replyContent) return;
-                    const targetMemo = tripData.memo.find(m => m.id === memoId);
-                    if (!targetMemo.replies) targetMemo.replies = [];
-                    targetMemo.replies.push({ name: myName, content: replyContent, timestamp: new Date().toISOString() });
-                    setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { memo: tripData.memo }, { merge: true });
-                } else {
-                    handleActionButtonClick(actionButton.dataset);
-                }
+                handleActionButtonClick(actionButton.dataset);
                 return;
             }
 
@@ -524,7 +472,7 @@
                 if (contentInput.value.trim() === '') return;
                 const name = nameInput.value.trim() || '名無しさん';
                 localStorage.setItem('memoName', name);
-                const newMemo = { id: `${Date.now()}-${Math.random()}`, name, content: contentInput.value.trim(), timestamp: new Date().toISOString(), reactions: {}, replies: [] };
+                const newMemo = { id: `${Date.now()}-${Math.random()}`, name, content: contentInput.value.trim(), timestamp: new Date().toISOString() };
                 const targetData = db ? tripData : tempTripData;
                 if(!targetData.memo) targetData.memo = [];
                 targetData.memo.push(newMemo);
