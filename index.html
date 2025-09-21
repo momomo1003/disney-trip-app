@@ -45,9 +45,23 @@
         .form-label { font-weight: 700; margin-bottom: 4px; display: block; }
         .form-button { width: 100%; background-color: var(--brand-yellow); color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); }
         .delete-btn { width: 100%; background-color: #fca5a5; color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); margin-top: 8px; }
-        .custom-checkbox { appearance: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--brand-dark); border-radius: 4px; position: relative; cursor: pointer; transition: background-color 0.2s; }
+        .custom-checkbox { appearance: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--brand-dark); border-radius: 4px; position: relative; cursor: pointer; transition: background-color 0.2s; vertical-align: middle; }
         .custom-checkbox:checked { background-color: var(--brand-yellow); }
         .custom-checkbox:checked::after { content: '✔'; font-size: 1rem; color: var(--brand-dark); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        /* 機能追加用スタイル */
+        .schedule-item.meetup { background-color: #fef9c3; border-width: 3px; border-color: var(--brand-yellow); }
+        .schedule-item.meetup .schedule-item-content::before { content: '全員集合'; font-size: 0.65rem; font-weight: 700; color: var(--brand-dark); background-color: var(--brand-yellow); padding: 2px 8px; border-radius: 99px; margin-right: 8px; }
+        .nav-item { position: relative; }
+        .notification-badge { position: absolute; top: 8px; right: 18px; background-color: #ef4444; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid white; transform: scale(0); transition: transform 0.2s ease; }
+        .notification-badge.visible { transform: scale(1); }
+        .reactions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #d1d5db; }
+        .reaction-emoji { cursor: pointer; padding: 4px 8px; border-radius: 99px; background-color: #f3f4f6; border: 1px solid #e5e7eb; transition: all 0.2s; font-size: 1.1rem; line-height: 1; }
+        .reaction-emoji.reacted { background-color: var(--brand-yellow); border-color: var(--brand-dark); }
+        .reaction-emoji span { margin-left: 4px; font-size: 12px; font-weight: 500; }
+        .replies-container { margin-top: 12px; padding-left: 16px; border-left: 3px solid #f3f4f6; }
+        .reply-item { background-color: #f9fafb; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; }
+        .reply-form { margin-top: 8px; }
     </style>
 </head>
 <body class="antialiased">
@@ -82,7 +96,7 @@
             <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="park"><i data-lucide="castle" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">PARK</span></div>
             <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="info"><i data-lucide="info" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">INFO</span></div>
             <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="packing"><i data-lucide="luggage" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">PACKING</span></div>
-            <div class="nav-item flex flex-col items-center justify-center cursor-pointer" data-tab="memo"><i data-lucide="message-circle" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">MEMO</span></div>
+            <div class="nav-item flex flex-col items-center justify-center cursor-pointer relative" data-tab="memo"><i data-lucide="message-circle" class="w-6 h-6"></i><span class="text-xs mt-1 font-bold">MEMO</span><span id="memo-notification-badge" class="notification-badge"></span></div>
         </div>
     </footer>
 
@@ -98,7 +112,6 @@
             messagingSenderId: "487174348558",
             appId: "1:487174348558:web:757571396bb4f8d7fc415f"
         };
-        // この変数を文字列としてグローバルスコープに設定
         window.__firebase_config = JSON.stringify(firebaseConfig);
         window.__app_id = firebaseConfig.appId;
     </script>
@@ -121,23 +134,19 @@
                 { title: "Rental Car", subtitle: "Hertz @ MCO Airport", details: "Reservation under 'Tanaka'.\nPickup: Sep 1, 2025, 10:00 AM\nReturn: Sep 5, 2025, 5:00 PM" }
             ],
             schedule: [
-                { date: "11月1日(土)", short: "1日目", theme: "DisneySea", events: [ { time: "15:00", title: "シェラトンに到着", location: "ホテル", details: "チェックイン後、荷物を置いてリゾートラインへ。", image: "" } ] },
-                { date: "11月2日(日)", short: "2日目", theme: "Disneyland", events: [ { time: "06:30", title: "朝食", location: "グランカフェ (シェラトン1F)", details: "ビュッフェ形式の朝食。", image: "" } ] },
-                { date: "11月3日(月)", short: "3日目", theme: "DisneySea", events: [ { time: "10:00", title: "ホテルで朝食", location: "オチェーアノ", details: "ビュッフェをゆっくり楽しむ。", image: "" } ] },
-                { date: "11月4日(火)", short: "4日目", theme: "Homeward Bound", events: [ { time: "09:00", title: "ホテルで最後の朝食", location: "ベッラヴィスタ・ラウンジ", details: "パークを眺めながら優雅に朝ごはん。", image: "" } ] }
+                { date: "11月1日(土)", short: "1日目", theme: "DisneySea", events: [ { time: "15:00", title: "シェラトンに到着", location: "ホテル", details: "チェックイン後、荷物を置いてリゾートラインへ。", image: "", isMeetup: false } ] },
+                { date: "11月2日(日)", short: "2日目", theme: "Disneyland", events: [ { time: "06:30", title: "朝食", location: "グランカフェ (シェラトン1F)", details: "ビュッフェ形式の朝食。", image: "", isMeetup: true } ] },
+                { date: "11月3日(月)", short: "3日目", theme: "DisneySea", events: [ { time: "10:00", title: "ホテルで朝食", location: "オチェーアノ", details: "ビュッフェをゆっくり楽しむ。", image: "", isMeetup: true } ] },
+                { date: "11月4日(火)", short: "4日目", theme: "Homeward Bound", events: [ { time: "09:00", title: "ホテルで最後の朝食", location: "ベッラヴィスタ・ラウンジ", details: "パークを眺めながら優雅に朝ごはん。", image: "", isMeetup: true } ] }
             ],
             parkInfo: { foods: [], souvenirs: [], photoSpots: [] },
             packing: [{ item: "パークチケット", done: false }, { item: "着替え", done: false }],
-            memo: []
+            memo: [],
+            userState: { lastMemoView: new Date().toISOString() }
         };
         
         async function initializeFirebase() {
-            if (Object.keys(firebaseConfig).length === 0) {
-                console.log("Firebase config not found, running in local mode.");
-                tripData = defaultTripData;
-                renderAllContent();
-                return;
-            }
+            if (Object.keys(firebaseConfig).length === 0) { console.log("Firebase config not found, running in local mode."); tripData = defaultTripData; renderAllContent(); return; }
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
@@ -159,8 +168,10 @@
             const tripDocRef = doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId);
             onSnapshot(tripDocRef, (docSnap) => {
                 tripData = docSnap.exists() ? docSnap.data() : defaultTripData;
+                if (!tripData.userState) tripData.userState = { lastMemoView: new Date(0).toISOString() }; //下位互換性
                 if (!docSnap.exists() && db) setDoc(tripDocRef, tripData);
                 renderAllContent();
+                updateMemoNotification();
             });
         }
 
@@ -190,8 +201,9 @@
             let content = createSectionHeader(`SCHEDULE - ${day.theme}`);
             content += `<div class="card p-6 mb-8"><div class="flex justify-between items-center mb-4"><h3 class="font-display text-xl">${day.date}</h3></div><div class="space-y-4">`;
             (day.events || []).forEach((event, eventIndex) => {
-                content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
-                                <p class="font-bold">${event.time} - ${event.title}</p>
+                const meetupClass = event.isMeetup ? 'meetup' : '';
+                content += `<div class="schedule-item flex items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50 ${meetupClass}" data-day="${currentDayIndex}" data-event="${eventIndex}">
+                                <div class="schedule-item-content flex items-center"><p class="font-bold">${event.time} - ${event.title}</p></div>
                             </div>`;
             });
             content += `</div><div class="edit-controls mt-4"><button data-action="add-schedule" data-day="${currentDayIndex}" class="form-button">予定を追加</button></div></div>`;
@@ -249,35 +261,53 @@
                         </li>`;
             });
             list += '</ul>';
-
             if (isEditing) {
                 list += `<div class="mt-4 flex items-center space-x-2">
-                                    <button data-action="add-packing" class="form-button text-sm py-2 grow">追加</button>
-                                    <button data-action="delete-selected-packing" class="delete-btn text-sm py-2 px-3 w-auto shrink-0" style="margin-top:0;">選択削除</button>
-                                </div>`;
+                            <button data-action="add-packing" class="form-button text-sm py-2 grow">追加</button>
+                            <button data-action="delete-selected-packing" class="delete-btn text-sm py-2 px-3 w-auto shrink-0" style="margin-top:0;">選択削除</button>
+                        </div>`;
             }
-            
-            content += list;
-            content += '</div>';
+            content += list + '</div>';
             container.innerHTML = content;
         }
 
         function renderMemo(data) {
             const container = document.getElementById('memo-content');
+            const availableReactions = ['😄', '🙏🏻', '👌🏻', '😭', '👍', '🙇‍♂️', '💪🏻', '🤔', '😡'];
             let content = createSectionHeader("MEMO");
             let list = `<div class="space-y-4 mb-6">`;
-            [...(data.memo || [])].reverse().forEach((memo, index) => {
-                const originalIndex = (data.memo || []).length - 1 - index;
-                list += `<div class="memo-item flex justify-between items-center border-2 border-black rounded-lg p-3 bg-white" data-index="${originalIndex}">
-                                        <div>
-                                            <p class="mb-1">${memo.content}</p>
-                                            <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
-                                        </div>
-                                </div>`;
+            [...(data.memo || [])].reverse().forEach((memo) => {
+                let reactionsHtml = '<div class="reactions-container">';
+                availableReactions.forEach(emoji => {
+                    const myName = localStorage.getItem('memoName') || '';
+                    const reacted = memo.reactions && memo.reactions[emoji] && memo.reactions[emoji].includes(myName);
+                    const count = (memo.reactions && memo.reactions[emoji]) ? memo.reactions[emoji].length : 0;
+                    reactionsHtml += `<div class="reaction-emoji ${reacted ? 'reacted' : ''}" data-action="react-memo" data-memo-id="${memo.id}" data-emoji="${emoji}">${emoji}${count > 0 ? `<span>${count}</span>` : ''}</div>`;
+                });
+                reactionsHtml += '</div>';
+
+                let repliesHtml = '<div class="replies-container">';
+                (memo.replies || []).forEach(reply => {
+                    repliesHtml += `<div class="reply-item">
+                                        <p class="text-sm">${reply.content}</p>
+                                        <div class="text-xs text-gray-500 mt-1"><span>${reply.name}</span> @ <span>${new Date(reply.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
+                                    </div>`;
+                });
+                repliesHtml += `</div>`;
+
+                list += `<div class="memo-item border-2 border-black rounded-lg p-4 bg-white" data-memo-id="${memo.id}">
+                            <p class="mb-1">${memo.content}</p>
+                            <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
+                            ${reactionsHtml}
+                            ${repliesHtml}
+                            <div class="reply-form mt-2">
+                                <button class="text-sm font-bold text-[var(--brand-blue)]" data-action="reply-memo" data-memo-id="${memo.id}">リプライする</button>
+                            </div>
+                         </div>`;
             });
             list += (data.memo || []).length === 0 ? '<p class="text-center text-sm text-gray-400">メモはまだありません</p>' : '';
             list += '</div>';
-            const form = `<div><input id="memo-name" type="text" placeholder="名前" class="form-input"><textarea id="memo-input" class="form-input" rows="3" placeholder="伝言やメモ..."></textarea><button id="add-memo-btn" class="form-button">メモを追加</button></div>`;
+            const form = `<div><input id="memo-name" type="text" placeholder="名前" class="form-input" value="${localStorage.getItem('memoName') || ''}"><textarea id="memo-input" class="form-input" rows="3" placeholder="伝言やメモ..."></textarea><button id="add-memo-btn" class="form-button">メモを追加</button></div>`;
             content += `<div class="card p-6">${list}${form}</div>`;
             container.innerHTML = content;
         }
@@ -304,28 +334,10 @@
             modal.innerHTML = `<div class="card w-full max-w-sm p-6 relative">${content}</div>`;
             modal.classList.add('visible');
             modal.querySelector('.card').onclick = e => e.stopPropagation();
-
             const saveButton = modal.querySelector('.save-edit-btn');
-            if (saveButton) {
-                saveButton.onclick = () => {
-                    if (onSave()) {
-                        closeEditModal();
-                        renderAllContent();
-                    }
-                };
-            }
-
+            if (saveButton) { saveButton.onclick = () => { if (onSave()) { closeEditModal(); renderAllContent(); } }; }
             const deleteButton = modal.querySelector('.delete-btn');
-            if (deleteButton) {
-                deleteButton.onclick = () => {
-                    if (confirm('本当にこの項目を削除しますか？')) {
-                        onDelete();
-                        closeEditModal();
-                        renderAllContent();
-                    }
-                };
-            }
-
+            if (deleteButton) { deleteButton.onclick = () => { if (confirm('本当にこの項目を削除しますか？')) { onDelete(); closeEditModal(); renderAllContent(); } }; }
             const imageInput = modal.querySelector('input[type="file"]');
             if(imageInput) {
                 imageInput.onchange = async (e) => {
@@ -336,15 +348,8 @@
                         preview.classList.remove('hidden');
                         try {
                             const imageUrl = await uploadImage(file);
-                            if (preview) {
-                                preview.src = imageUrl;
-                                preview.dataset.imageUrl = imageUrl; 
-                            }
-                        } catch (error) {
-                            console.error("Image upload failed:", error);
-                            alert("画像のアップロードに失敗しました。");
-                            preview.classList.add('hidden');
-                        }
+                            if (preview) { preview.src = imageUrl; preview.dataset.imageUrl = imageUrl; }
+                        } catch (error) { console.error("Image upload failed:", error); alert("画像のアップロードに失敗しました。"); preview.classList.add('hidden'); }
                     }
                 };
             }
@@ -354,79 +359,62 @@
         function closeEditModal() { document.getElementById('edit-modal').classList.remove('visible'); }
         
         async function uploadImage(file) {
-            if (!storage || !tripId) {
-                throw new Error("Firebase Storage is not initialized or tripId is missing.");
-            }
-
-            // 1. 画像を圧縮し、Base64文字列に変換
+            if (!storage || !tripId) { throw new Error("Firebase Storage is not initialized or tripId is missing."); }
             const compressedBase64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
-                        let width = img.width;
-                        let height = img.height;
-                        const maxWidth = 1024;
-                        const maxHeight = 1024;
-
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+                        let width = img.width; let height = img.height; const maxWidth = 1024; const maxHeight = 1024;
+                        if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                        } else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
+                        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
-                    img.onerror = reject;
-                    img.src = event.target.result;
+                    img.onerror = reject; img.src = event.target.result;
                 };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
+                reader.onerror = reject; reader.readAsDataURL(file);
             });
-            
-            // 2. Firebase Storageにアップロード
             const fileName = `${Date.now()}-${file.name}`;
             const storageRef = ref(storage, `images/${tripId}/${fileName}`);
             const uploadTask = await uploadString(storageRef, compressedBase64, 'data_url');
-
-            // 3. ダウンロードURLを取得して返す
-            const downloadURL = await getDownloadURL(uploadTask.ref);
-            return downloadURL;
+            return await getDownloadURL(uploadTask.ref);
         }
 
+        function updateMemoNotification() {
+            const lastView = localStorage.getItem('lastMemoViewTimestamp');
+            if (!lastView || !tripData.memo) return;
+            const newMemos = tripData.memo.filter(m => new Date(m.timestamp) > new Date(lastView));
+            const badge = document.getElementById('memo-notification-badge');
+            if (newMemos.length > 0) {
+                badge.textContent = newMemos.length;
+                badge.classList.add('visible');
+            } else {
+                badge.classList.remove('visible');
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeFirebase();
             const splashScreen = document.getElementById('splash-screen');
             setTimeout(() => { splashScreen.style.pointerEvents = 'none'; }, 3000);
-
             const navItems = document.querySelectorAll('#bottom-nav .nav-item');
             const contentSections = document.querySelectorAll('.content-section');
             const scheduleSubNav = document.getElementById('schedule-sub-nav');
-            
-            if (document.querySelector('.nav-item.active')?.dataset.tab === 'schedule') {
-                scheduleSubNav.classList.add('visible');
-            } else {
-                scheduleSubNav.classList.remove('visible');
-            }
-
+            if (document.querySelector('.nav-item.active')?.dataset.tab === 'schedule') { scheduleSubNav.classList.add('visible'); } else { scheduleSubNav.classList.remove('visible'); }
             navItems.forEach(item => {
                 item.addEventListener('click', (e) => {
+                    const tab = e.currentTarget.dataset.tab;
+                    if (tab === 'memo') {
+                        localStorage.setItem('lastMemoViewTimestamp', new Date().toISOString());
+                        updateMemoNotification();
+                    }
                     navItems.forEach(i => i.classList.remove('active'));
                     e.currentTarget.classList.add('active');
-                    const targetId = `${e.currentTarget.dataset.tab}-content`;
+                    const targetId = `${tab}-content`;
                     contentSections.forEach(section => section.classList.toggle('hidden', section.id !== targetId));
-                    scheduleSubNav.classList.toggle('visible', e.currentTarget.dataset.tab === 'schedule');
+                    scheduleSubNav.classList.toggle('visible', tab === 'schedule');
                 });
             });
             
@@ -448,10 +436,7 @@
             document.querySelector('main').addEventListener('click', mainContentClickHandler);
             document.getElementById('schedule-sub-nav').addEventListener('click', (e) => {
                 const subNavItem = e.target.closest('.sub-nav-item');
-                if (subNavItem) {
-                    currentDayIndex = parseInt(subNavItem.dataset.dayIndex, 10);
-                    renderAllContent();
-                }
+                if (subNavItem) { currentDayIndex = parseInt(subNavItem.dataset.dayIndex, 10); renderAllContent(); }
             });
              [document.getElementById('view-modal'), document.getElementById('edit-modal')].forEach(modal => {
                   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
@@ -460,9 +445,29 @@
 
         function mainContentClickHandler(e) {
             const actionButton = e.target.closest('[data-action]');
-
             if (actionButton) {
-                handleActionButtonClick(actionButton.dataset);
+                const { action, day, type, memoId, emoji } = actionButton.dataset;
+                if (action === 'react-memo') {
+                    const myName = localStorage.getItem('memoName') || '名無しさん';
+                    const targetMemo = tripData.memo.find(m => m.id === memoId);
+                    if (!targetMemo.reactions) targetMemo.reactions = {};
+                    if (!targetMemo.reactions[emoji]) targetMemo.reactions[emoji] = [];
+                    const myReactionIndex = targetMemo.reactions[emoji].indexOf(myName);
+                    if (myReactionIndex > -1) { targetMemo.reactions[emoji].splice(myReactionIndex, 1); } else { targetMemo.reactions[emoji].push(myName); }
+                    setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { memo: tripData.memo }, { merge: true });
+                } else if (action === 'reply-memo') {
+                    const myName = localStorage.getItem('memoName') || prompt("リプライする名前を入力してください:", "");
+                    if (!myName) return;
+                    localStorage.setItem('memoName', myName);
+                    const replyContent = prompt("リプライを入力してください:");
+                    if (!replyContent) return;
+                    const targetMemo = tripData.memo.find(m => m.id === memoId);
+                    if (!targetMemo.replies) targetMemo.replies = [];
+                    targetMemo.replies.push({ name: myName, content: replyContent, timestamp: new Date().toISOString() });
+                    setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { memo: tripData.memo }, { merge: true });
+                } else {
+                    handleActionButtonClick(actionButton.dataset);
+                }
                 return;
             }
 
@@ -475,7 +480,8 @@
                 if (infoItem) { handleInfoItemClick(infoItem.dataset.index); return; }
                 const memoItem = e.target.closest('.memo-item');
                 if (memoItem && confirm('このメモを削除しますか？')) {
-                    tempTripData.memo.splice(memoItem.dataset.index, 1);
+                    const memoId = memoItem.dataset.memoId;
+                    tempTripData.memo = tempTripData.memo.filter(m => m.id !== memoId);
                     renderAllContent();
                 }
             } else { 
@@ -507,9 +513,7 @@
                     const { index } = itemElement.dataset;
                     const item = tripData.packing[index];
                     item.done = packingCheckbox.checked;
-                    if (db) {
-                        setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { packing: tripData.packing }, { merge: true });
-                    }
+                    if (db) { setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { packing: tripData.packing }, { merge: true }); }
                     renderAllContent();
                 }
             }
@@ -518,7 +522,9 @@
                 const nameInput = document.getElementById('memo-name');
                 const contentInput = document.getElementById('memo-input');
                 if (contentInput.value.trim() === '') return;
-                const newMemo = { name: nameInput.value.trim() || '名無しさん', content: contentInput.value.trim(), timestamp: new Date().toISOString() };
+                const name = nameInput.value.trim() || '名無しさん';
+                localStorage.setItem('memoName', name);
+                const newMemo = { id: `${Date.now()}-${Math.random()}`, name, content: contentInput.value.trim(), timestamp: new Date().toISOString(), reactions: {}, replies: [] };
                 const targetData = db ? tripData : tempTripData;
                 if(!targetData.memo) targetData.memo = [];
                 targetData.memo.push(newMemo);
@@ -533,6 +539,7 @@
             const form = `<h3 class="font-display text-xl text-center mb-4">予定を編集</h3>
                 <label class="form-label">時間</label><input id="edit-time" type="time" class="form-input" value="${item.time}">
                 <label class="form-label">タイトル</label><input id="edit-title" type="text" class="form-input" value="${item.title}">
+                <div class="my-3"><input type="checkbox" id="edit-is-meetup" class="custom-checkbox" ${item.isMeetup ? 'checked' : ''}><label for="edit-is-meetup" class="ml-2">家族全員集合</label></div>
                 <label class="form-label">場所</label><input id="edit-location" type="text" class="form-input" value="${item.location || ''}">
                 <label class="form-label">詳細</label><textarea id="edit-details" class="form-input" rows="3">${item.details || ''}</textarea>
                 <label class="form-label">画像</label><input id="edit-image" type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
@@ -545,6 +552,7 @@
                 editedItem.location = document.getElementById('edit-location').value;
                 editedItem.details = document.getElementById('edit-details').value;
                 editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
+                editedItem.isMeetup = document.getElementById('edit-is-meetup').checked;
                 tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                 return true;
             }, () => {
@@ -554,12 +562,7 @@
 
         function handleParkItemClick(type, index) {
             const item = tempTripData.parkInfo[type][index];
-            let locationFields = (item.locations || [{store:'', hours:'', area:''}]).map((loc) => `
-                <div class="border p-2 rounded-md mb-2">
-                    <input type="text" class="form-input text-sm" data-field="store" value="${loc.store || ''}" placeholder="店舗">
-                    <input type="text" class="form-input text-sm" data-field="hours" value="${loc.hours || ''}" placeholder="営業時間">
-                    <input type="text" class="form-input text-sm" data-field="area" value="${loc.area || ''}" placeholder="エリア">
-                </div>`).join('');
+            let locationFields = (item.locations || [{store:'', hours:'', area:''}]).map((loc) => `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" value="${loc.store || ''}" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" value="${loc.hours || ''}" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" value="${loc.area || ''}" placeholder="エリア"></div>`).join('');
             const form = `<h3 class="font-display text-xl text-center mb-4">項目を編集</h3>
                 <label class="form-label">名前</label><input id="edit-name" type="text" class="form-input" value="${item.name}">
                 <label class="form-label">店舗・エリア情報</label><div id="locations-container">${locationFields}</div>
@@ -575,19 +578,12 @@
                 editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
                 editedItem.locations = [];
                 document.querySelectorAll('#locations-container > div').forEach(div => {
-                    editedItem.locations.push({
-                        store: div.querySelector('[data-field="store"]').value,
-                        hours: div.querySelector('[data-field="hours"]').value,
-                        area: div.querySelector('[data-field="area"]').value,
-                    });
+                    editedItem.locations.push({ store: div.querySelector('[data-field="store"]').value, hours: div.querySelector('[data-field="hours"]').value, area: div.querySelector('[data-field="area"]').value });
                 });
                 return true;
-            }, () => {
-                tempTripData.parkInfo[type].splice(index, 1);
-            });
+            }, () => { tempTripData.parkInfo[type].splice(index, 1); });
             document.getElementById('add-location-field').onclick = () => {
-                const container = document.getElementById('locations-container');
-                container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
+                document.getElementById('locations-container').insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
             };
         }
         
@@ -599,16 +595,13 @@
                 <label class="form-label">Details</label><textarea id="edit-info-details" class="form-input" rows="4">${item.details}</textarea>
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この情報を削除</button>`;
-            
             openEditModal(form, () => {
                 const editedItem = tempTripData.otherInfo[index];
                 editedItem.title = document.getElementById('edit-info-title').value;
                 editedItem.subtitle = document.getElementById('edit-info-subtitle').value;
                 editedItem.details = document.getElementById('edit-info-details').value;
                 return true;
-            }, () => {
-                tempTripData.otherInfo.splice(index, 1);
-            });
+            }, () => { tempTripData.otherInfo.splice(index, 1); });
         }
 
         function handleActionButtonClick(dataset) {
@@ -617,6 +610,7 @@
                 const form = `<h3 class="font-display text-xl text-center mb-4">予定を追加</h3>
                     <label class="form-label">時間</label><input id="add-time" type="time" class="form-input">
                     <label class="form-label">タイトル</label><input id="add-title" type="text" class="form-input" placeholder="例: アトラクション名">
+                    <div class="my-3"><input type="checkbox" id="add-is-meetup" class="custom-checkbox"><label for="add-is-meetup" class="ml-2">家族全員集合</label></div>
                     <label class="form-label">場所</label><input id="add-location" type="text" class="form-input" placeholder="例: ファンタジーランド">
                     <label class="form-label">詳細</label><textarea id="add-details" class="form-input" rows="3" placeholder="メモ..."></textarea>
                     <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-image-url="">
@@ -628,7 +622,8 @@
                         title: document.getElementById('add-title').value,
                         location: document.getElementById('add-location').value,
                         details: document.getElementById('add-details').value,
-                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || ""
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || "",
+                        isMeetup: document.getElementById('add-is-meetup').checked
                     });
                     tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                     return true;
@@ -649,19 +644,14 @@
                         locations: []
                     };
                     document.querySelectorAll('#locations-container > div').forEach(div => {
-                        newItem.locations.push({
-                            store: div.querySelector('[data-field="store"]').value,
-                            hours: div.querySelector('[data-field="hours"]').value,
-                            area: div.querySelector('[data-field="area"]').value,
-                        });
+                        newItem.locations.push({ store: div.querySelector('[data-field="store"]').value, hours: div.querySelector('[data-field="hours"]').value, area: div.querySelector('[data-field="area"]').value });
                     });
                      if (!tempTripData.parkInfo[type]) tempTripData.parkInfo[type] = [];
                     tempTripData.parkInfo[type].push(newItem);
                     return true;
                 });
                   document.getElementById('add-location-field').onclick = () => {
-                       const container = document.getElementById('locations-container');
-                       container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
+                       document.getElementById('locations-container').insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
                    };
             } else if (action === 'add-packing') {
                 const form = `<h3 class="font-display text-xl text-center mb-4">持ち物をまとめて追加</h3>
@@ -690,13 +680,8 @@
                     <label class="form-label">Subtitle</label><input id="add-info-subtitle" type="text" class="form-input" placeholder="例：JAL / HND ⇄ MCO">
                     <label class="form-label">Details</label><textarea id="add-info-details" class="form-input" rows="4" placeholder="予約番号や座席番号などの詳細..."></textarea>
                     <button class="form-button save-edit-btn mt-4">追加</button>`;
-                
                 openEditModal(form, () => {
-                    const newItem = {
-                        title: document.getElementById('add-info-title').value,
-                        subtitle: document.getElementById('add-info-subtitle').value,
-                        details: document.getElementById('add-info-details').value,
-                    };
+                    const newItem = { title: document.getElementById('add-info-title').value, subtitle: document.getElementById('add-info-subtitle').value, details: document.getElementById('add-info-details').value, };
                     if (!tempTripData.otherInfo) tempTripData.otherInfo = [];
                     tempTripData.otherInfo.push(newItem);
                     return true;
