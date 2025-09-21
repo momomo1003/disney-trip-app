@@ -107,11 +107,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        let db, auth, tripData = {}, isEditing = false, tripId, currentDayIndex = 0;
+        let db, auth, storage, tripData = {}, isEditing = false, tripId, currentDayIndex = 0;
         let tempTripData = {}; 
         
         const defaultTripData = {
@@ -140,6 +141,7 @@
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
+            storage = getStorage(app);
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
                 else await signInAnonymously(auth);
@@ -148,15 +150,10 @@
         }
         
         function setupTripListener() {
-            // ↓↓↓ このIDをあなたの固定したいIDに変更してください ↓↓↓
             tripId = "our-magical-trip-2025";
-
-            // URLを固定IDに合わせる（必須ではありませんが、共有時の混乱を避けるため推奨）
             if (window.location.search !== `?trip=${tripId}` && window.location.protocol !== 'blob:') {
                 try { window.history.replaceState({}, '', `?trip=${tripId}`); } catch (e) { console.error("History state could not be replaced.", e); }
             }
-
-            // --- ここから下は元のコードと同じ ---
             document.getElementById('trip-id-display').value = tripId;
             document.getElementById('trip-id-container').classList.remove('hidden');
             const tripDocRef = doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId);
@@ -334,12 +331,19 @@
                 imageInput.onchange = async (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        const base64 = await handleImageUpload(file);
                         const preview = modal.querySelector('.image-preview');
-                        if (preview) {
-                            preview.src = base64;
-                            preview.dataset.base64 = base64;
-                            preview.classList.remove('hidden');
+                        preview.src = 'https://placehold.co/400x300/cccccc/27272a?text=Uploading...';
+                        preview.classList.remove('hidden');
+                        try {
+                            const imageUrl = await uploadImage(file);
+                            if (preview) {
+                                preview.src = imageUrl;
+                                preview.dataset.imageUrl = imageUrl; 
+                            }
+                        } catch (error) {
+                            console.error("Image upload failed:", error);
+                            alert("画像のアップロードに失敗しました。");
+                            preview.classList.add('hidden');
                         }
                     }
                 };
@@ -348,15 +352,22 @@
         
         function closeViewModal() { document.getElementById('view-modal').classList.remove('visible'); }
         function closeEditModal() { document.getElementById('edit-modal').classList.remove('visible'); }
+        
+        async function uploadImage(file) {
+            if (!storage || !tripId) {
+                throw new Error("Firebase Storage is not initialized or tripId is missing.");
+            }
 
-        function handleImageUpload(file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) {
-            return new Promise((resolve, reject) => {
+            // 1. 画像を圧縮し、Base64文字列に変換
+            const compressedBase64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
                         let width = img.width;
                         let height = img.height;
+                        const maxWidth = 1024;
+                        const maxHeight = 1024;
 
                         if (width > height) {
                             if (width > maxWidth) {
@@ -369,14 +380,12 @@
                                 height = maxHeight;
                             }
                         }
-
                         const canvas = document.createElement('canvas');
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-
-                        resolve(canvas.toDataURL('image/jpeg', quality));
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                     img.onerror = reject;
                     img.src = event.target.result;
@@ -384,7 +393,17 @@
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
+            
+            // 2. Firebase Storageにアップロード
+            const fileName = `${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, `images/${tripId}/${fileName}`);
+            const uploadTask = await uploadString(storageRef, compressedBase64, 'data_url');
+
+            // 3. ダウンロードURLを取得して返す
+            const downloadURL = await getDownloadURL(uploadTask.ref);
+            return downloadURL;
         }
+
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeFirebase();
@@ -491,7 +510,7 @@
                     if (db) {
                         setDoc(doc(db, `artifacts/${appId}/public/data/trip_plans`, tripId), { packing: tripData.packing }, { merge: true });
                     }
-                    renderAllContent(); // Re-render to show line-through
+                    renderAllContent();
                 }
             }
             
@@ -516,7 +535,7 @@
                 <label class="form-label">タイトル</label><input id="edit-title" type="text" class="form-input" value="${item.title}">
                 <label class="form-label">場所</label><input id="edit-location" type="text" class="form-input" value="${item.location || ''}">
                 <label class="form-label">詳細</label><textarea id="edit-details" class="form-input" rows="3">${item.details || ''}</textarea>
-                <label class="form-label">画像</label><input id="edit-image" type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-base64="${item.image || ''}">
+                <label class="form-label">画像</label><input id="edit-image" type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この予定を削除</button>`;
             openEditModal(form, () => {
@@ -525,10 +544,8 @@
                 editedItem.title = document.getElementById('edit-title').value;
                 editedItem.location = document.getElementById('edit-location').value;
                 editedItem.details = document.getElementById('edit-details').value;
-                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64;
-                // ▼▼▼ 修正点 ▼▼▼
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
                 tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
-                // ▲▲▲ 修正点 ▲▲▲
                 return true;
             }, () => {
                 tempTripData.schedule[day].events.splice(event, 1);
@@ -548,14 +565,14 @@
                 <label class="form-label">店舗・エリア情報</label><div id="locations-container">${locationFields}</div>
                 <button id="add-location-field" type="button" class="text-sm bg-gray-200 py-1 px-3 rounded-md mb-2">場所を追加</button>
                 <label class="form-label">メモ</label><textarea id="edit-memo" class="form-input" rows="2">${item.memo || ''}</textarea>
-                <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-base64="${item.image || ''}">
+                <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この項目を削除</button>`;
             openEditModal(form, () => {
                 const editedItem = tempTripData.parkInfo[type][index];
                 editedItem.name = document.getElementById('edit-name').value;
                 editedItem.memo = document.getElementById('edit-memo').value;
-                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64;
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
                 editedItem.locations = [];
                 document.querySelectorAll('#locations-container > div').forEach(div => {
                     editedItem.locations.push({
@@ -602,7 +619,7 @@
                     <label class="form-label">タイトル</label><input id="add-title" type="text" class="form-input" placeholder="例: アトラクション名">
                     <label class="form-label">場所</label><input id="add-location" type="text" class="form-input" placeholder="例: ファンタジーランド">
                     <label class="form-label">詳細</label><textarea id="add-details" class="form-input" rows="3" placeholder="メモ..."></textarea>
-                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-base64="">
+                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-image-url="">
                     <button class="form-button save-edit-btn mt-4">追加</button>`;
                 openEditModal(form, () => {
                     if (!tempTripData.schedule[day].events) tempTripData.schedule[day].events = [];
@@ -611,11 +628,9 @@
                         title: document.getElementById('add-title').value,
                         location: document.getElementById('add-location').value,
                         details: document.getElementById('add-details').value,
-                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64 || ""
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || ""
                     });
-                    // ▼▼▼ 修正点 ▼▼▼
                     tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
-                    // ▲▲▲ 修正点 ▲▲▲
                     return true;
                 });
             } else if (action === 'add-park') {
@@ -624,13 +639,13 @@
                     <div id="locations-container"><div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div></div>
                      <button id="add-location-field" type="button" class="text-sm bg-gray-200 py-1 px-3 rounded-md mb-2">場所を追加</button>
                     <label class="form-label">メモ</label><textarea id="add-memo" class="form-input" rows="2"></textarea>
-                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-base64="">
+                    <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-image-url="">
                     <button class="form-button save-edit-btn mt-4">追加</button>`;
                 openEditModal(form, () => {
                     const newItem = {
                         name: document.getElementById('add-name').value,
                         memo: document.getElementById('add-memo').value,
-                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.base64 || "",
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || "",
                         locations: []
                     };
                     document.querySelectorAll('#locations-container > div').forEach(div => {
