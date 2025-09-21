@@ -51,7 +51,6 @@
 
         /* 機能追加用スタイル */
         .schedule-item.meetup { background-color: #fef9c3; border-width: 3px; border-color: var(--brand-yellow); }
-        .schedule-item.meetup .schedule-item-content::before { content: '全員集合'; font-size: 0.65rem; font-weight: 700; color: var(--brand-dark); background-color: var(--brand-yellow); padding: 2px 8px; border-radius: 99px; margin-right: 8px; }
         .nav-item { position: relative; }
         .notification-badge { position: absolute; top: 8px; right: 18px; background-color: #ef4444; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid white; transform: scale(0); transition: transform 0.2s ease; }
         .notification-badge.visible { transform: scale(1); }
@@ -196,7 +195,7 @@
             (day.events || []).forEach((event, eventIndex) => {
                 const meetupClass = event.isMeetup ? 'meetup' : '';
                 content += `<div class="schedule-item flex items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50 ${meetupClass}" data-day="${currentDayIndex}" data-event="${eventIndex}">
-                                <div class="schedule-item-content flex items-center"><p class="font-bold">${event.time} - ${event.title}</p></div>
+                                <p class="font-bold">${event.time} - ${event.title}</p>
                             </div>`;
             });
             content += `</div><div class="edit-controls mt-4"><button data-action="add-schedule" data-day="${currentDayIndex}" class="form-button">予定を追加</button></div></div>`;
@@ -437,7 +436,8 @@
                 if (scheduleItem) {
                     const { day, event } = scheduleItem.dataset;
                     const item = tripData.schedule[day].events[event];
-                    openViewModal(`<div class="card w-full max-w-sm p-6 relative"><h3 class="font-display text-2xl text-center mb-4">${item.title}</h3>${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-lg mb-4">` : ''}<div class="bg-gray-100 p-3 rounded-lg text-center mb-4"><p class="font-bold text-sm">${item.time}</p><p class="text-sm">${item.location}</p></div><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
+                    const meetupBadge = item.isMeetup ? `<div class="text-center mb-2"><span class="text-xs font-bold text-[var(--brand-dark)] bg-[var(--brand-yellow)] py-1 px-3 rounded-full">全員集合</span></div>` : '';
+                    openViewModal(`<div class="card w-full max-w-sm p-6 relative">${meetupBadge}<h3 class="font-display text-2xl text-center mb-4">${item.title}</h3>${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-lg mb-4">` : ''}<div class="bg-gray-100 p-3 rounded-lg text-center mb-4"><p class="font-bold text-sm">${item.time}</p><p class="text-sm">${item.location}</p></div><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
                     return;
                 }
                 const parkItem = e.target.closest('.park-item');
