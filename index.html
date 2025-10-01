@@ -98,7 +98,6 @@
             messagingSenderId: "487174348558",
             appId: "1:487174348558:web:757571396bb4f8d7fc415f"
         };
-        // この変数を文字列としてグローバルスコープに設定
         window.__firebase_config = JSON.stringify(firebaseConfig);
         window.__app_id = firebaseConfig.appId;
     </script>
@@ -334,16 +333,31 @@
                     const file = e.target.files[0];
                     if (file) {
                         const preview = modal.querySelector('.image-preview');
-                        // ローカルの画像を一時的にプレビュー表示
                         preview.src = URL.createObjectURL(file);
                         preview.classList.remove('hidden');
 
-                        // Storageにアップロードして、返ってきたURLをデータとして保持
                         const imageUrl = await uploadImageToStorage(file); 
                         if (imageUrl) {
                             preview.dataset.imageUrl = imageUrl; 
                         }
                     }
+                };
+            }
+
+            const deleteImageBtn = modal.querySelector('#delete-image-btn');
+            if (deleteImageBtn) {
+                deleteImageBtn.onclick = () => {
+                    const preview = modal.querySelector('.image-preview');
+                    const fileInput = modal.querySelector('input[type="file"]');
+                    
+                    preview.src = '';
+                    preview.classList.add('hidden');
+                    preview.dataset.imageUrl = '';
+
+                    if(fileInput) fileInput.value = '';
+
+                    deleteImageBtn.style.display = 'none'; 
+                    alert('画像を削除しました。保存ボタンを押して変更を確定してください。');
                 };
             }
         }
@@ -353,14 +367,11 @@
 
         async function uploadImageToStorage(file) {
             if (!file) return null;
-            // ファイル名が重複しないように、現在時刻を接頭辞として付与
             const fileName = `${Date.now()}-${file.name}`;
             const storageRef = ref(storage, `trip-images/${fileName}`);
 
             try {
-                // ファイルをCloud Storageにアップロード
                 const snapshot = await uploadBytes(storageRef, file);
-                // アップロードしたファイルのダウンロードURLを取得
                 const downloadURL = await getDownloadURL(snapshot.ref);
                 return downloadURL;
             } catch (error) {
@@ -500,7 +511,12 @@
                 <label class="form-label">タイトル</label><input id="edit-title" type="text" class="form-input" value="${item.title}">
                 <label class="form-label">場所</label><input id="edit-location" type="text" class="form-input" value="${item.location || ''}">
                 <label class="form-label">詳細</label><textarea id="edit-details" class="form-input" rows="3">${item.details || ''}</textarea>
-                <label class="form-label">画像</label><input id="edit-image" type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
+                <label class="form-label">画像</label>
+                <div class="flex items-center space-x-2">
+                    <input id="edit-image" type="file" accept="image/*" class="form-input mb-0">
+                    ${item.image ? '<button type="button" id="delete-image-btn" class="text-xs bg-red-100 text-red-700 p-2 rounded-lg">削除</button>' : ''}
+                </div>
+                <img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この予定を削除</button>`;
             openEditModal(form, () => {
@@ -530,7 +546,12 @@
                 <label class="form-label">店舗・エリア情報</label><div id="locations-container">${locationFields}</div>
                 <button id="add-location-field" type="button" class="text-sm bg-gray-200 py-1 px-3 rounded-md mb-2">場所を追加</button>
                 <label class="form-label">メモ</label><textarea id="edit-memo" class="form-input" rows="2">${item.memo || ''}</textarea>
-                <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
+                <label class="form-label">画像</label>
+                <div class="flex items-center space-x-2">
+                    <input type="file" accept="image/*" class="form-input mb-0">
+                    ${item.image ? '<button type="button" id="delete-image-btn" class="text-xs bg-red-100 text-red-700 p-2 rounded-lg">削除</button>' : ''}
+                </div>
+                <img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この項目を削除</button>`;
             openEditModal(form, () => {
