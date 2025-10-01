@@ -120,10 +120,10 @@
                 { title: "Rental Car", subtitle: "Hertz @ MCO Airport", details: "Reservation under 'Tanaka'.\nPickup: Sep 1, 2025, 10:00 AM\nReturn: Sep 5, 2025, 5:00 PM" }
             ],
             schedule: [
-                { date: "11月1日(土)", short: "1日目", theme: "DisneySea", events: [ { time: "15:00", title: "シェラトンに到着", location: "ホテル", details: "チェックイン後、荷物を置いてリゾートラインへ。", image: "" } ] },
-                { date: "11月2日(日)", short: "2日目", theme: "Disneyland", events: [ { time: "06:30", title: "朝食", location: "グランカフェ (シェラトン1F)", details: "ビュッフェ形式の朝食。", image: "" } ] },
-                { date: "11月3日(月)", short: "3日目", theme: "DisneySea", events: [ { time: "10:00", title: "ホテルで朝食", location: "オチェーアノ", details: "ビュッフェをゆっくり楽しむ。", image: "" } ] },
-                { date: "11月4日(火)", short: "4日目", theme: "Homeward Bound", events: [ { time: "09:00", title: "ホテルで最後の朝食", location: "ベッラヴィスタ・ラウンジ", details: "パークを眺めながら優雅に朝ごはん。", image: "" } ] }
+                { date: "11月1日(土)", short: "1日目", theme: "DisneySea", events: [ { time: "15:00", title: "シェラトンに到着", location: "ホテル", details: "チェックイン後、荷物を置いてリゾートラインへ。", image: "", isGroupEvent: false } ] },
+                { date: "11月2日(日)", short: "2日目", theme: "Disneyland", events: [ { time: "06:30", title: "朝食", location: "グランカフェ (シェラトン1F)", details: "ビュッフェ形式の朝食。", image: "", isGroupEvent: true } ] },
+                { date: "11月3日(月)", short: "3日目", theme: "DisneySea", events: [ { time: "10:00", title: "ホテルで朝食", location: "オチェーアノ", details: "ビュッフェをゆっくり楽しむ。", image: "", isGroupEvent: false } ] },
+                { date: "11月4日(火)", short: "4日目", theme: "Homeward Bound", events: [ { time: "09:00", title: "ホテルで最後の朝食", location: "ベッラヴィスタ・ラウンジ", details: "パークを眺めながら優雅に朝ごはん。", image: "", isGroupEvent: false } ] }
             ],
             parkInfo: { foods: [], souvenirs: [], photoSpots: [] },
             packing: [{ item: "パークチケット", done: false }, { item: "着替え", done: false }],
@@ -191,7 +191,8 @@
             let content = createSectionHeader(`SCHEDULE - ${day.theme}`);
             content += `<div class="card p-6 mb-8"><div class="flex justify-between items-center mb-4"><h3 class="font-display text-xl">${day.date}</h3></div><div class="space-y-4">`;
             (day.events || []).forEach((event, eventIndex) => {
-                content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer bg-white hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
+                const highlightClass = event.isGroupEvent ? 'bg-[var(--brand-yellow)]' : 'bg-white';
+                content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer ${highlightClass} hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
                                 <p class="font-bold">${event.time} - ${event.title}</p>
                             </div>`;
             });
@@ -274,7 +275,7 @@
                                             <p class="mb-1">${memo.content}</p>
                                             <div class="text-xs text-gray-500"><span>${memo.name}</span> @ <span>${new Date(memo.timestamp).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}</span></div>
                                         </div>
-                                </div>`;
+                        </div>`;
             });
             list += (data.memo || []).length === 0 ? '<p class="text-center text-sm text-gray-400">メモはまだありません</p>' : '';
             list += '</div>';
@@ -284,14 +285,14 @@
         }
 
         function renderScheduleSubNav(data) {
-              const container = document.getElementById('schedule-sub-nav');
-              let content = '<div class="grid grid-cols-4 h-full">';
-              (data.schedule || []).forEach((day, index) => {
-                  const isActive = index === currentDayIndex ? 'active' : '';
-                  content += `<div class="sub-nav-item flex items-center justify-center cursor-pointer font-bold ${isActive}" data-day-index="${index}">${day.short}</div>`;
-              });
-              content += '</div>';
-              container.innerHTML = content;
+             const container = document.getElementById('schedule-sub-nav');
+             let content = '<div class="grid grid-cols-4 h-full">';
+             (data.schedule || []).forEach((day, index) => {
+                 const isActive = index === currentDayIndex ? 'active' : '';
+                 content += `<div class="sub-nav-item flex items-center justify-center cursor-pointer font-bold ${isActive}" data-day-index="${index}">${day.short}</div>`;
+             });
+             content += '</div>';
+             container.innerHTML = content;
         }
         
         function openViewModal(content) {
@@ -448,7 +449,7 @@
                 }
             });
              [document.getElementById('view-modal'), document.getElementById('edit-modal')].forEach(modal => {
-                  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+                 modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
             });
         });
 
@@ -495,7 +496,7 @@
                     openViewModal(`<div class="card w-full max-w-sm p-6 relative"><h3 class="font-display text-2xl text-center mb-4">${item.title}</h3><p class="text-center text-gray-500 mb-4">${item.subtitle}</p><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
                     return;
                 }
-                  const packingCheckbox = e.target.closest('.packing-item input[type="checkbox"]');
+                 const packingCheckbox = e.target.closest('.packing-item input[type="checkbox"]');
                 if(packingCheckbox){
                     const itemElement = packingCheckbox.closest('.packing-item');
                     const { index } = itemElement.dataset;
@@ -535,6 +536,10 @@
                     ${item.image ? '<button type="button" id="delete-image-btn" class="text-xs bg-red-100 text-red-700 p-2 rounded-lg">削除</button>' : ''}
                 </div>
                 <img class="image-preview ${item.image ? '' : 'hidden'} w-full h-32 object-cover rounded-md mt-2" src="${item.image || ''}" data-image-url="${item.image || ''}">
+                <div class="flex items-center mt-4 mb-2">
+                    <input id="edit-isGroupEvent" type="checkbox" class="custom-checkbox" ${item.isGroupEvent ? 'checked' : ''}>
+                    <label for="edit-isGroupEvent" class="ml-2 font-medium">家族全員集合</label>
+                </div>
                 <button class="form-button save-edit-btn mt-4">変更を保存</button>
                 <button class="delete-btn">この予定を削除</button>`;
             openEditModal(form, () => {
@@ -544,6 +549,7 @@
                 editedItem.location = document.getElementById('edit-location').value;
                 editedItem.details = document.getElementById('edit-details').value;
                 editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
+                editedItem.isGroupEvent = document.getElementById('edit-isGroupEvent').checked;
                 tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                 return true;
             }, () => {
@@ -632,6 +638,10 @@
                     <label class="form-label">場所</label><input id="add-location" type="text" class="form-input" placeholder="例: ファンタジーランド">
                     <label class="form-label">詳細</label><textarea id="add-details" class="form-input" rows="3" placeholder="メモ..."></textarea>
                     <label class="form-label">画像</label><input type="file" accept="image/*" class="form-input"><img class="image-preview hidden w-full h-32 object-cover rounded-md mt-2" src="" data-image-url="">
+                    <div class="flex items-center mt-4 mb-2">
+                        <input id="add-isGroupEvent" type="checkbox" class="custom-checkbox">
+                        <label for="add-isGroupEvent" class="ml-2 font-medium">家族全員集合</label>
+                    </div>
                     <button class="form-button save-edit-btn mt-4">追加</button>`;
                 openEditModal(form, () => {
                     if (!tempTripData.schedule[day].events) tempTripData.schedule[day].events = [];
@@ -640,7 +650,8 @@
                         title: document.getElementById('add-title').value,
                         location: document.getElementById('add-location').value,
                         details: document.getElementById('add-details').value,
-                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || ""
+                        image: document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || "",
+                        isGroupEvent: document.getElementById('add-isGroupEvent').checked
                     });
                     tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                     return true;
@@ -671,10 +682,10 @@
                     tempTripData.parkInfo[type].push(newItem);
                     return true;
                 });
-                  document.getElementById('add-location-field').onclick = () => {
-                       const container = document.getElementById('locations-container');
-                       container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
-                   };
+                 document.getElementById('add-location-field').onclick = () => {
+                     const container = document.getElementById('locations-container');
+                     container.insertAdjacentHTML('beforeend', `<div class="border p-2 rounded-md mb-2"><input type="text" class="form-input text-sm" data-field="store" placeholder="店舗"><input type="text" class="form-input text-sm" data-field="hours" placeholder="営業時間"><input type="text" class="form-input text-sm" data-field="area" placeholder="エリア"></div>`);
+                 };
             } else if (action === 'add-packing') {
                 const form = `<h3 class="font-display text-xl text-center mb-4">持ち物をまとめて追加</h3>
                     <label class="form-label">持ち物リスト（改行で区切る）</label>
