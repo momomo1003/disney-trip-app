@@ -15,7 +15,11 @@
 
     <style>
         :root {
-            --brand-yellow: #fde047; --brand-blue: #0e7490; --brand-dark: #1e293b; --brand-bg: var(--brand-blue);
+            --brand-yellow: #fde047;
+            --brand-yellow-light: #fef08a;
+            --brand-blue: #0e7490;
+            --brand-dark: #1e293b;
+            --brand-bg: var(--brand-blue);
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
@@ -46,7 +50,7 @@
         .form-button { width: 100%; background-color: var(--brand-yellow); color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); }
         .delete-btn { width: 100%; background-color: #fca5a5; color: var(--brand-dark); font-weight: 700; padding: 12px; border-radius: 8px; border: 2px solid var(--brand-dark); margin-top: 8px; }
         .custom-checkbox { appearance: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--brand-dark); border-radius: 4px; position: relative; cursor: pointer; transition: background-color 0.2s; }
-        .custom-checkbox:checked { background-color: var(--brand-yellow); }
+        .custom-checkbox:checked { background-color: var(--brand-yellow-light); }
         .custom-checkbox:checked::after { content: '✔'; font-size: 1rem; color: var(--brand-dark); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
@@ -191,7 +195,7 @@
             let content = createSectionHeader(`SCHEDULE - ${day.theme}`);
             content += `<div class="card p-6 mb-8"><div class="flex justify-between items-center mb-4"><h3 class="font-display text-xl">${day.date}</h3></div><div class="space-y-4">`;
             (day.events || []).forEach((event, eventIndex) => {
-                const highlightClass = event.isGroupEvent ? 'bg-[var(--brand-yellow)]' : 'bg-white';
+                const highlightClass = event.isGroupEvent ? 'bg-[var(--brand-yellow-light)]' : 'bg-white';
                 content += `<div class="schedule-item flex justify-between items-center border-2 border-black rounded-lg p-3 cursor-pointer ${highlightClass} hover:bg-gray-50" data-day="${currentDayIndex}" data-event="${eventIndex}">
                                 <p class="font-bold">${event.time} - ${event.title}</p>
                             </div>`;
@@ -478,7 +482,22 @@
                 if (scheduleItem) {
                     const { day, event } = scheduleItem.dataset;
                     const item = tripData.schedule[day].events[event];
-                    openViewModal(`<div class="card w-full max-w-sm p-6 relative"><h3 class="font-display text-2xl text-center mb-4">${item.title}</h3>${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-lg mb-4">` : ''}<div class="bg-gray-100 p-3 rounded-lg text-center mb-4"><p class="font-bold text-sm">${item.time}</p><p class="text-sm">${item.location}</p></div><p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p></div>`);
+                    const groupEventBadge = item.isGroupEvent 
+                        ? `<div class="text-center mb-3"><span class="inline-flex items-center gap-1 bg-[var(--brand-yellow-light)] text-gray-800 text-xs font-semibold px-2.5 py-1 rounded-full"><i data-lucide="users" class="w-3 h-3"></i>全員集合</span></div>` 
+                        : '';
+                    const titleMargin = item.isGroupEvent ? 'mb-1' : 'mb-4';
+
+                    openViewModal(`<div class="card w-full max-w-sm p-6 relative">
+                                    <h3 class="font-display text-2xl text-center ${titleMargin}">${item.title}</h3>
+                                    ${groupEventBadge}
+                                    ${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-lg mb-4">` : ''}
+                                    <div class="bg-gray-100 p-3 rounded-lg text-center mb-4">
+                                        <p class="font-bold text-sm">${item.time}</p>
+                                        <p class="text-sm">${item.location}</p>
+                                    </div>
+                                    <p class="text-sm leading-relaxed whitespace-pre-wrap">${item.details || ''}</p>
+                                   </div>`);
+                    lucide.createIcons();
                     return;
                 }
                 const parkItem = e.target.closest('.park-item');
