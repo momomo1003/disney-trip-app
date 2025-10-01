@@ -106,7 +106,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -231,7 +231,7 @@
                                 <p class="text-sm text-gray-600">${item.subtitle}</p>
                             </div>`;
             });
-            content += '</div><div class="edit-controls mt-4"><button data-action="add-info" class="form-button">情報を追加</button></div></div>`;
+            content += '</div><div class="edit-controls mt-4"><button data-action="add-info" class="form-button">情報を追加</button></div></div>';
             container.innerHTML = content;
         }
 
@@ -349,6 +349,11 @@
                 deleteImageBtn.onclick = () => {
                     const preview = modal.querySelector('.image-preview');
                     const fileInput = modal.querySelector('input[type="file"]');
+                    const imageUrlToDelete = preview.dataset.imageUrl;
+
+                    if (imageUrlToDelete) {
+                        deleteImageFromStorage(imageUrlToDelete);
+                    }
                     
                     preview.src = '';
                     preview.classList.add('hidden');
@@ -378,6 +383,19 @@
                 console.error("Image upload failed: ", error);
                 alert("画像のアップロードに失敗しました。");
                 return null;
+            }
+        }
+
+        async function deleteImageFromStorage(imageUrl) {
+            if (!imageUrl || !imageUrl.startsWith("https://firebasestorage.googleapis.com")) {
+                return;
+            }
+            const imageRef = ref(storage, imageUrl);
+            try {
+                await deleteObject(imageRef);
+                console.log("Image deleted successfully from Storage.");
+            } catch (error) {
+                console.error("Error deleting image from Storage: ", error);
             }
         }
 
@@ -529,6 +547,10 @@
                 tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                 return true;
             }, () => {
+                const itemToDelete = tempTripData.schedule[day].events[event];
+                if (itemToDelete.image) {
+                    deleteImageFromStorage(itemToDelete.image);
+                }
                 tempTripData.schedule[day].events.splice(event, 1);
             });
         }
@@ -569,6 +591,10 @@
                 });
                 return true;
             }, () => {
+                const itemToDelete = tempTripData.parkInfo[type][index];
+                if (itemToDelete.image) {
+                    deleteImageFromStorage(itemToDelete.image);
+                }
                 tempTripData.parkInfo[type].splice(index, 1);
             });
             document.getElementById('add-location-field').onclick = () => {
