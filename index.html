@@ -231,7 +231,7 @@
                                 <p class="text-sm text-gray-600">${item.subtitle}</p>
                             </div>`;
             });
-            content += '</div><div class="edit-controls mt-4"><button data-action="add-info" class="form-button">情報を追加</button></div></div>';
+            content += '</div><div class="edit-controls mt-4"><button data-action="add-info" class="form-button">情報を追加</button></div></div>`;
             container.innerHTML = content;
         }
 
@@ -525,7 +525,7 @@
                 editedItem.title = document.getElementById('edit-title').value;
                 editedItem.location = document.getElementById('edit-location').value;
                 editedItem.details = document.getElementById('edit-details').value;
-                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || item.image || '';
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
                 tempTripData.schedule[day].events.sort((a, b) => a.time.localeCompare(b.time));
                 return true;
             }, () => {
@@ -558,7 +558,7 @@
                 const editedItem = tempTripData.parkInfo[type][index];
                 editedItem.name = document.getElementById('edit-name').value;
                 editedItem.memo = document.getElementById('edit-memo').value;
-                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl || item.image || '';
+                editedItem.image = document.getElementById('edit-modal').querySelector('.image-preview').dataset.imageUrl;
                 editedItem.locations = [];
                 document.querySelectorAll('#locations-container > div').forEach(div => {
                     editedItem.locations.push({
